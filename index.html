@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F4E78">
+<title>UW Pro — Underwriting Workflow Dashboard</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#f5f7fb;color:#172033}
+header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}.num{font-size:25px;font-weight:800}.muted{color:#64748b;font-size:13px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.toolbar input,.toolbar select,.form input,.form select,.form textarea{padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff}
+.toolbar input{min-width:220px}button{border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font-weight:700}.primary{background:#1f4e78;color:#fff}.secondary{background:#eef2f7;color:#334155}
+.tableWrap{overflow:auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1050px}th,td{padding:11px 10px;border-bottom:1px solid #edf0f4;text-align:left;font-size:13px;white-space:nowrap;background:#fff}th{font-weight:800;color:#334155;background:#f8fafc}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.quoted{background:#fef3c7;color:#92400e}.confirmed{background:#dbeafe;color:#1d4ed8}.issued{background:#dcfce7;color:#15803d}.declined{background:#fee2e2;color:#b91c1c}.pending{background:#fff;color:#475569;border:1px solid #e5e7eb}.urgent{background:#fee2e2;color:#b91c1c}.high{background:#ffedd5;color:#c2410c}.normal{background:#e5e7eb;color:#475569}.low{background:#f1f5f9;color:#64748b}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.form label{font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:5px}.form input,.form select,.form textarea{width:100%}.full{grid-column:1/-1}.actions{display:flex;gap:8px;margin-top:15px}
+.login{position:fixed;inset:0;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.loginBox{width:min(400px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 20px 55px #0001}.loginBox input{width:100%;padding:12px;margin:7px 0;border:1px solid #d1d5db;border-radius:9px}.loginBox button{width:100%;margin-top:8px;background:#1f4e78;color:#fff}.hidden{display:none!important}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:12px}header{padding:13px}.toolbar input{min-width:100%}}
+
+.brandMark{width:48px;height:48px;border-radius:12px;background:#1f4e78;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;margin-bottom:12px}
+.loginBox h1{margin:0 0 4px}.loginLabel{display:block;font-size:12px;font-weight:700;color:#475569;margin-top:9px}
+.loginHint{text-align:center;color:#94a3b8;font-size:12px;margin:14px 0 0}
+.headerActions{display:flex;align-items:center;gap:10px}
+.statusDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
+.smallCard{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+.sectionTitle{font-size:16px;font-weight:800;margin:0 0 12px}
+.form input[type="number"]{appearance:textfield}
+
+</style>
+</head>
+<body>
+<div id="login" class="login"><div class="loginBox">
+<div class="brandMark">UW</div>
+<h1>UW Pro</h1><p class="muted">Underwriting Workflow Dashboard</p>
+<label class="loginLabel">Username</label>
+<input id="user" placeholder="Enter username" autocomplete="username">
+<label class="loginLabel">Password</label>
+<input id="pass" type="password" placeholder="Enter password" autocomplete="current-password">
+<button onclick="login()">Sign in</button>
+<p class="loginHint">Authorized users only</p>
+</div></div>
+
+<header><div><h1>UW Pro</h1><span class="muted">Underwriting Workflow</span></div>
+<div><span class="muted" id="who"></span> <button class="secondary" onclick="logout()">Logout</button></div></header>
+
+<main class="wrap">
+<div id="dashboard">
+<div class="grid">
+<div class="card"><div class="muted">Total Requests</div><div class="num" id="total">0</div></div>
+<div class="card"><div class="muted">Quoted</div><div class="num" id="quoted">0</div></div>
+<div class="card"><div class="muted">Confirmed</div><div class="num" id="confirmed">0</div></div>
+<div class="card"><div class="muted">Follow-ups Due</div><div class="num" id="due">0</div></div>
+</div>
+<div class="smallCard" style="margin-top:14px">
+  <div class="sectionTitle">System Status</div>
+  <span class="statusDot"></span><span class="muted">Local data storage active</span>
+  <span class="muted" style="margin-left:18px">Changes are saved in this browser.</span>
+</div>
+
+<div class="toolbar">
+<input id="search" placeholder="Search client, reference, agent..." oninput="render()">
+<select id="statusFilter" onchange="render()"><option value="">All Status</option><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select>
+<select id="priorityFilter" onchange="render()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
+<select id="businessFilter" onchange="render()"><option value="">All Business</option><option>Group Medical</option><option>General Non-Motor</option></select>
+<button class="primary" onclick="newRequest()">+ New Request</button>
+<button class="secondary" onclick="exportExcel()">Export Excel</button><button class="secondary" onclick="clearAllData()">Clear All Data</button>
+</div>
+
+<div class="card" style="margin-bottom:14px"><b>Priority Work Plan</b>
+<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px">
+<span class="badge urgent">Urgent <b id="pu">0</b></span><span class="badge high">High <b id="ph">0</b></span><span class="badge normal">Normal <b id="pn">0</b></span><span class="badge low">Low <b id="pl">0</b></span>
+</div></div>
+
+<div class="tableWrap"><table><thead><tr><th>Ref</th><th>Date</th><th>Agent</th><th>Client</th><th>Contact</th><th>Business</th><th>Cover</th><th>Sum Insured</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+
+<div id="editor" class="card hidden"><h2 id="editorTitle">New Request</h2>
+<div class="form">
+<div><label>Reference No.</label><input id="ref" readonly></div>
+<div><label>Request Date</label><input id="date" type="date"></div>
+<div><label>Agent / Broker</label><input id="agent"></div>
+<div><label>Client / Insured</label><input id="client"></div>
+<div><label>Contact Phone</label><input id="phone" type="tel" placeholder="+971..."></div>
+<div><label>Email</label><input id="email" type="email" placeholder="client@example.com"></div>
+<div><label>Business Type</label><select id="business"><option>Group Medical</option><option>General Non-Motor</option></select></div>
+<div><label>Cover Type</label><input id="cover"></div>
+<div><label>Sum Insured</label><input id="sumInsured" type="number" step="0.01" placeholder="0.00"></div>
+<div><label>Priority</label><select id="priority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
+<div><label>Status</label><select id="status"><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select></div>
+<div><label>Follow-up Date</label><input id="follow" type="date"></div>
+<div><label>Members Count</label><input id="members" type="number"></div>
+<div><label>Policy Expiry</label><input id="expiry" type="date"></div>
+<div><label>Previous Premium</label><input id="prevPremium" type="number" step="0.01"></div>
+<div><label>Quoted Premium</label><input id="quotePremium" type="number" step="0.01"></div>
+<div><label>Previous Insurer</label><input id="prevInsurer"></div>
+<div><label>Previous Policy No.</label><input id="prevPolicy"></div>
+<div><label>Policy / Risk Type</label><input id="policyType"></div>
+<div><label>Quotation Deadline</label><input id="quoteDeadline" type="date"></div>
+<div class="full"><label>Remarks</label><textarea id="remarks" rows="3" placeholder="Add underwriting notes, requirements, exclusions or follow-up details..."></textarea></div>
+</div><div class="actions"><button class="primary" onclick="save()">Save / Update</button><button class="secondary" onclick="closeEditor()">Cancel</button></div>
+</div>
+</main>
+
+<script>
+const KEY='uwpro_requests_v1';let data=JSON.parse(localStorage.getItem(KEY)||'[]'),editing=null;
+const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
+function login(){if($('user').value==='admin'&&$('pass').value==='UWPro@2026'){sessionStorage.uw=1;$('login').classList.add('hidden');$('who').textContent='Admin'}else alert('Invalid username or password');}
+function logout(){sessionStorage.removeItem('uw');location.reload()}
+if(sessionStorage.uw){$('login').classList.add('hidden');$('who').textContent='Admin'}
+function badge(s){return '<span class="badge '+s.toLowerCase()+'">'+s+'</span>'}
+function pb(p){return '<span class="badge '+p.toLowerCase()+'">'+p+'</span>'}
+function rank(p){return ({Urgent:0,High:1,Normal:2,Low:3}[p]??4)}
+function render(){
+ let q=$('search').value.toLowerCase(),sf=$('statusFilter').value,pf=$('priorityFilter').value,bf=$('businessFilter').value;
+ let rows=[...data].sort((a,b)=>rank(a.priority)-rank(b.priority)||b.ref-a.ref).filter(r=>
+ (!q||[r.ref,r.client,r.agent,r.cover].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf)&&(!bf||r.business===bf));
+ $('rows').innerHTML=rows.length?rows.map(r=>'<tr><td>#'+r.ref+'</td><td>'+r.date+'</td><td>'+esc(r.agent)+'</td><td>'+esc(r.client)+'</td><td>'+esc(r.phone||'')+'</td><td>'+r.business+'</td><td>'+esc(r.cover)+'</td><td>'+formatMoney(r.sumInsured)+'</td><td>'+pb(r.priority)+'</td><td>'+badge(r.status)+'</td><td>'+r.follow+'</td><td><button class="secondary" onclick="edit('+r.ref+')">Edit</button></td></tr>').join(''):'<tr><td colspan="12" style="text-align:center;padding:25px">No requests found.</td></tr>';
+ $('total').textContent=data.length;$('quoted').textContent=data.filter(r=>r.status==='Quoted').length;$('confirmed').textContent=data.filter(r=>r.status==='Confirmed').length;
+ $('due').textContent=data.filter(r=>r.follow&&r.follow<=today()&&!['Issued','Declined'].includes(r.status)).length;
+ $('pu').textContent=data.filter(r=>r.priority==='Urgent').length;$('ph').textContent=data.filter(r=>r.priority==='High').length;$('pn').textContent=data.filter(r=>r.priority==='Normal').length;$('pl').textContent=data.filter(r=>r.priority==='Low').length;
+}
+function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function newRequest(){editing=null;$('editorTitle').textContent='New Request';clearForm();$('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);$('date').value=today();$('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
+function clearForm(){['agent','client','phone','email','cover','sumInsured','follow','members','expiry','prevPremium','quotePremium','prevInsurer','prevPolicy','policyType','quoteDeadline','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
+function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
+function save(){
+let r={
+ref:Number($('ref').value),date:$('date').value,agent:$('agent').value,client:$('client').value,
+phone:$('phone').value,email:$('email').value,business:$('business').value,cover:$('cover').value,
+sumInsured:$('sumInsured').value,priority:$('priority').value,status:$('status').value,follow:$('follow').value,
+members:$('members').value,expiry:$('expiry').value,prevPremium:$('prevPremium').value,quotePremium:$('quotePremium').value,
+prevInsurer:$('prevInsurer').value,prevPolicy:$('prevPolicy').value,policyType:$('policyType').value,
+quoteDeadline:$('quoteDeadline').value,remarks:$('remarks').value
+};
+if(!r.client||!r.agent||!r.date){alert('Please fill Date, Agent and Client.');return}
+if(editing){data[data.findIndex(x=>x.ref===editing)]=r}else data.push(r);
+localStorage.setItem(KEY,JSON.stringify(data));closeEditor()
+}
+function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
+function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function clearAllData(){if(!data.length){alert('There is no saved data to clear.');return}if(confirm('Delete all saved underwriting requests from this browser? This cannot be undone.')){data=[];localStorage.removeItem(KEY);render()}}
+async function exportExcel(){
+  if(!data.length){alert('No requests to export.');return}
+  if(!window.XLSX){
+    await new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+      s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
+    }).catch(()=>{});
+  }
+  if(!window.XLSX){alert('Excel export library could not load. Please check your internet connection and try again.');return}
+
+  const headers=['S.No.','Reference No.','Request Date','Agent / Broker','Client / Insured','Phone','Email','Business Type','Cover Type','Sum Insured','Priority','Status','Follow-up Date','Members','Policy Expiry','Previous Premium','Quoted Premium','Previous Insurer','Previous Policy No.','Policy / Risk Type','Quotation Deadline','Remarks'];
+  const body=data.map((r,i)=>[
+    i+1,r.ref,r.date,r.agent,r.client,r.phone||'',r.email||'',r.business,r.cover,r.sumInsured||'',r.priority,r.status,r.follow,r.members,r.expiry,r.prevPremium,r.quotePremium,r.prevInsurer,r.prevPolicy,r.policyType,r.quoteDeadline||'',r.remarks
+  ]);
+  const ws=XLSX.utils.aoa_to_sheet([headers,...body]);
+  ws['!cols']=[7,14,14,20,26,17,28,20,22,16,12,13,15,10,15,16,16,22,20,22,18,35].map(w=>({wch:w}));
+  const range=XLSX.utils.decode_range(ws['!ref']);
+  const border={top:{style:'thin',color:{rgb:'B7C3D0'}},bottom:{style:'thin',color:{rgb:'B7C3D0'}},left:{style:'thin',color:{rgb:'B7C3D0'}},right:{style:'thin',color:{rgb:'B7C3D0'}}};
+
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:0,c})];
+    if(cell) cell.s={fill:{fgColor:{rgb:'1F4E78'}},font:{bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center'},border};
+  }
+  for(let r=1;r<=range.e.r;r++){
+    for(let c=0;c<=range.e.c;c++){
+      const cell=ws[XLSX.utils.encode_cell({r,c})];
+      if(cell) cell.s={border,alignment:{vertical:'center',wrapText:c===21}};
+    }
+    const status=String(ws[XLSX.utils.encode_cell({r,c:11})]?.v||'');
+    const priority=String(ws[XLSX.utils.encode_cell({r,c:10})]?.v||'');
+    const statusColors={Pending:null,Quoted:'FFF2CC',Confirmed:'D9EAF7',Issued:'E2F0D9',Declined:'F4CCCC'};
+    const priorityColors={Urgent:'F4CCCC',High:'FCE4D6',Normal:'E7E6E6',Low:'F2F2F2'};
+    if(statusColors[status]){
+      const cell=ws[XLSX.utils.encode_cell({r,c:11})];
+      if(cell) cell.s={fill:{fgColor:{rgb:statusColors[status]}},font:{bold:true},border,alignment:{horizontal:'center'}};
+    }
+    if(priorityColors[priority]){
+      const cell=ws[XLSX.utils.encode_cell({r,c:10})];
+      if(cell) cell.s={fill:{fgColor:{rgb:priorityColors[priority]}},font:{bold:true},border,alignment:{horizontal:'center'}};
+    }
+  }
+  ws['!freeze']={xSplit:0,ySplit:1};
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Underwriting');
+  XLSX.writeFile(wb,'UW_Pro_Underwriting_Report.xlsx');
+}
+render();
+</script>
+</body></html>
