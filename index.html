@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F4E78">
+<title>UW Pro — Underwriting Workflow Dashboard</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#f5f7fb;color:#172033}
+header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}.num{font-size:25px;font-weight:800}.muted{color:#64748b;font-size:13px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.toolbar input,.toolbar select,.form input,.form select,.form textarea{padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff}
+.toolbar input{min-width:220px}button{border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font-weight:700}.primary{background:#1f4e78;color:#fff}.secondary{background:#eef2f7;color:#334155}
+.tableWrap{overflow:auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1180px}th,td{padding:11px 10px;border-bottom:1px solid #edf0f4;text-align:left;font-size:13px;white-space:nowrap;background:#fff}th{font-weight:800;color:#334155;background:#f8fafc}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.quoted{background:#fef3c7;color:#92400e}.confirmed{background:#dbeafe;color:#1d4ed8}.issued{background:#dcfce7;color:#15803d}.declined{background:#fee2e2;color:#b91c1c}.pending{background:#fff;color:#475569;border:1px solid #e5e7eb}.urgent{background:#fee2e2;color:#b91c1c}.high{background:#ffedd5;color:#c2410c}.normal{background:#e5e7eb;color:#475569}.low{background:#f1f5f9;color:#64748b}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.form label{font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:5px}.form input,.form select,.form textarea{width:100%}.full{grid-column:1/-1}.actions{display:flex;gap:8px;margin-top:15px}
+.login{position:fixed;inset:0;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.loginBox{width:min(400px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 20px 55px #0001}.loginBox input{width:100%;padding:12px;margin:7px 0;border:1px solid #d1d5db;border-radius:9px}.loginBox button{width:100%;margin-top:8px;background:#1f4e78;color:#fff}.hidden{display:none!important}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:12px}header{padding:13px}.toolbar input{min-width:100%}}
+
+.brandMark{width:48px;height:48px;border-radius:12px;background:#1f4e78;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;margin-bottom:12px}
+.loginBox h1{margin:0 0 4px}.loginLabel{display:block;font-size:12px;font-weight:700;color:#475569;margin-top:9px}
+.loginHint{text-align:center;color:#94a3b8;font-size:12px;margin:14px 0 0}
+.headerActions{display:flex;align-items:center;gap:10px}
+.statusDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
+.smallCard{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+.sectionTitle{font-size:16px;font-weight:800;margin:0 0 12px}
+.form input[type="number"]{appearance:textfield}
+
+
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;background:#173b5c;color:#fff;padding:22px 14px;z-index:50;display:flex;flex-direction:column}
+.sideBrand{font-size:21px;font-weight:900;padding:4px 12px 24px}
+.sideBrand span{display:block;font-size:11px;font-weight:500;opacity:.7;margin-top:4px}
+.navBtn{width:100%;text-align:left;background:transparent;color:#dbeafe;border:0;padding:12px 13px;border-radius:9px;margin:3px 0;font-weight:700}
+.navBtn:hover,.navBtn.active{background:#285a82;color:#fff}
+.sideBottom{margin-top:auto;padding:12px;font-size:11px;color:#b8c9d8;line-height:1.5}
+.mainShell{margin-left:230px}
+.page{display:none}.page.active{display:block}
+.reportGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.reportCard{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}
+.reportCard .big{font-size:27px;font-weight:900;margin-top:5px}
+.barWrap{margin:9px 0 14px}.barLabel{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.bar{height:9px;background:#edf2f7;border-radius:99px;overflow:hidden}.bar>i{display:block;height:100%;background:#1f4e78;border-radius:99px}
+.quickGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.followupSection{margin-bottom:18px}.followupSection h3{margin:0 0 10px;font-size:14px}.followupItem{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:8px;background:#fff}.followupItem.overdue{border-left:5px solid #dc2626}.followupItem.today{border-left:5px solid #d97706}.followupItem.upcoming{border-left:5px solid #2563eb}.followupMeta{font-size:12px;color:#64748b;margin-top:4px}.followupAction{white-space:nowrap}.reminderBadge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}.reminderBadge.overdue{background:#fee2e2;color:#b91c1c}.reminderBadge.today{background:#fef3c7;color:#92400e}.reminderBadge.upcoming{background:#dbeafe;color:#1d4ed8}
+@media(max-width:800px){.sidebar{width:72px;padding:14px 8px}.sideBrand{font-size:0;text-align:center}.sideBrand:before{content:'UW';font-size:18px}.sideBrand span{display:none}.navBtn{font-size:0;text-align:center;padding:13px 5px}.navBtn:before{content:'•';font-size:20px}.sideBottom{display:none}.mainShell{margin-left:72px}.reportGrid{grid-template-columns:1fr}.quickGrid{grid-template-columns:1fr}}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="login" class="login"><div class="loginBox">
+<div class="brandMark">UW</div>
+<h1>UW Pro</h1><p class="muted">Underwriting Workflow Dashboard</p>
+<label class="loginLabel">Username</label>
+<input id="user" placeholder="Enter username" autocomplete="username">
+<label class="loginLabel">Password</label>
+<input id="pass" type="password" placeholder="Enter password" autocomplete="current-password">
+<button onclick="login()">Sign in</button>
+<p class="loginHint">Authorized users only</p>
+</div></div>
+
+<aside class="sidebar">
+  <div class="sideBrand">UW Pro<span>Underwriting Workflow</span></div>
+  <button class="navBtn active" onclick="showPage('mainPage',this)">Main</button>
+  <button class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
+  <button class="navBtn" onclick="showPage('requestsPage',this)">Requests</button>
+  <button class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
+  <button class="navBtn" onclick="showPage('settingsPage',this)">Settings</button>
+  <div class="sideBottom"><span class="statusDot"></span> Cloud sync<br><span id="syncStatus">Not configured</span></div>
+</aside>
+
+<div class="mainShell">
+<header><div><h1>UW Pro</h1><span class="muted">Underwriting Workflow</span></div>
+<div class="headerActions"><span class="muted" id="who"></span> <button class="secondary" onclick="logout()">Logout</button></div></header>
+
+<main class="wrap">
+<div id="mainPage" class="page active">
+<div id="dashboard">
+<div class="grid">
+<div class="card"><div class="muted">Total Requests</div><div class="num" id="total">0</div></div>
+<div class="card"><div class="muted">Quoted</div><div class="num" id="quoted">0</div></div>
+<div class="card"><div class="muted">Confirmed</div><div class="num" id="confirmed">0</div></div>
+<div class="card"><div class="muted">Follow-ups Due</div><div class="num" id="due">0</div></div><div class="card"><div class="muted">Overdue Open</div><div class="num" id="overdue">0</div></div>
+</div>
+<div class="smallCard" style="margin-top:14px">
+  <div class="sectionTitle">System Status</div>
+  <span class="statusDot"></span><span class="muted">Cloud database ready</span>
+  <span class="muted" style="margin-left:18px">Changes are synced across devices when Supabase is configured.</span>
+</div>
+
+<div class="toolbar">
+<input id="search" placeholder="Search client, reference, agent..." oninput="render()">
+<select id="statusFilter" onchange="render()"><option value="">All Status</option><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select>
+<select id="priorityFilter" onchange="render()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
+<select id="businessFilter" onchange="render()"><option value="">All Business</option><option>Group Medical</option><option>General Non-Motor</option></select><select id="monthFilter" onchange="render()"><option value="">All Months</option></select>
+<button class="primary" onclick="newRequest()">+ New Request</button>
+<button class="secondary" onclick="exportExcel()">Export Excel</button><button class="secondary" onclick="clearAllData()">Clear All Data</button>
+</div>
+
+<div class="card" style="margin-bottom:14px"><b>Priority Work Plan</b>
+<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px">
+<span class="badge urgent">Urgent <b id="pu">0</b></span><span class="badge high">High <b id="ph">0</b></span><span class="badge normal">Normal <b id="pn">0</b></span><span class="badge low">Low <b id="pl">0</b></span>
+</div></div>
+
+<div class="tableWrap"><table><thead><tr><th>Ref</th><th>Date</th><th>Month</th><th>Agent</th><th>Client</th><th>Contact</th><th>Business</th><th>Cover</th><th>Sum Insured</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+</div>
+
+<div id="reportsPage" class="page">
+  <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">Reports & Analytics</h2><div class="muted">Live summary from your underwriting requests.</div></div>
+  <div class="reportGrid">
+    <div class="reportCard"><div class="muted">Total Requests</div><div class="big" id="repTotal">0</div></div>
+    <div class="reportCard"><div class="muted">Open Requests</div><div class="big" id="repOpen">0</div></div>
+    <div class="reportCard"><div class="muted">Quoted Premium</div><div class="big" id="repPremium">0.00</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="sectionTitle">Status Distribution</div>
+    <div id="statusBars"></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="sectionTitle">Monthly Requests</div>
+    <div id="monthBars"></div>
+  </div>
+  <div class="card">
+    <div class="sectionTitle">Priority Distribution</div>
+    <div id="priorityBars"></div>
+  </div>
+</div>
+
+<div id="requestsPage" class="page">
+  <div class="card"><h2 class="sectionTitle">Requests</h2><div class="muted">Use Main for the dashboard and filters, or create a new request below.</div><div class="actions"><button class="primary" onclick="newRequest()">+ New Request</button><button class="secondary" onclick="showPage('mainPage',document.querySelector('.navBtn'))">Open Main Dashboard</button></div></div>
+</div>
+
+<div id="followupsPage" class="page">
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><h2 class="sectionTitle" style="margin-bottom:4px">Follow-up Reminder Center</h2><div class="muted">See overdue, today's and upcoming follow-ups in one place.</div></div>
+      <button id="notifyBtn" class="secondary" onclick="enableNotifications()">Enable Notifications</button>
+    </div>
+    <div class="grid" style="margin-top:14px;grid-template-columns:repeat(3,1fr)">
+      <div class="smallCard"><div class="muted">Overdue</div><div class="num" id="fuOverdue">0</div></div>
+      <div class="smallCard"><div class="muted">Due Today</div><div class="num" id="fuToday">0</div></div>
+      <div class="smallCard"><div class="muted">Next 7 Days</div><div class="num" id="fuUpcoming">0</div></div>
+    </div>
+  </div>
+  <div class="card"><div id="followupList" class="muted">No follow-ups scheduled.</div></div>
+</div>
+
+<div id="settingsPage" class="page">
+  <div class="card">
+    <h2 class="sectionTitle">System Settings</h2>
+    <p class="muted">Cloud database status: <b id="settingsSync">Not configured</b></p>
+    <p class="muted">Supabase cloud sync is configured for this project. Make sure the UW Pro SQL schema has been run in Supabase before saving data.</p>
+  </div>
+</div>
+
+<div id="editor" class="card hidden"><h2 id="editorTitle">New Request</h2>
+<div class="form">
+<div><label>Reference No.</label><input id="ref" readonly></div>
+<div><label>Request Date</label><input id="date" type="date"></div>
+<div><label>Agent / Broker</label><input id="agent"></div>
+<div><label>Client / Insured</label><input id="client"></div>
+<div><label>Contact Phone</label><input id="phone" type="tel" placeholder="+971..."></div>
+<div><label>Email</label><input id="email" type="email" placeholder="client@example.com"></div>
+<div><label>Business Type</label><select id="business"><option>Group Medical</option><option>General Non-Motor</option></select></div>
+<div><label>Cover Type</label><input id="cover"></div>
+<div><label>Sum Insured</label><input id="sumInsured" type="number" step="0.01" placeholder="0.00"></div>
+<div><label>Priority</label><select id="priority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
+<div><label>Status</label><select id="status"><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select></div>
+<div><label>Follow-up Date</label><input id="follow" type="date"></div>
+<div><label>Members Count</label><input id="members" type="number"></div>
+<div><label>Policy Expiry</label><input id="expiry" type="date"></div>
+<div><label>Previous Premium</label><input id="prevPremium" type="number" step="0.01"></div>
+<div><label>Quoted Premium</label><input id="quotePremium" type="number" step="0.01"></div>
+<div><label>Previous Insurer</label><input id="prevInsurer"></div>
+<div><label>Previous Policy No.</label><input id="prevPolicy"></div>
+<div><label>Policy / Risk Type</label><input id="policyType"></div>
+<div><label>Quotation Deadline</label><input id="quoteDeadline" type="date"></div>
+<div class="full"><label>Remarks</label><textarea id="remarks" rows="3" placeholder="Add underwriting notes, requirements, exclusions or follow-up details..."></textarea></div>
+</div><div class="actions"><button class="primary" onclick="save()">Save / Update</button><button class="secondary" onclick="closeEditor()">Cancel</button></div>
+</div>
+</main>
+</div>
+
+<script>
+
+/* =========================
+   SUPABASE CLOUD CONFIG
+   =========================
+   Paste your own values here after creating a Supabase project.
+   Never put a service_role key in this file.
+*/
+const SUPABASE_URL = 'https://ycbghdoeljtxsjvbprkb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_fB_vcUa0VaQPn0aeOnmPMQ_UfWvOeYQ';
+const CLOUD_ENABLED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+const supa = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
+
+const KEY='uwpro_requests_v1';
+let data=JSON.parse(localStorage.getItem(KEY)||'[]'),editing=null;
+
+function setSyncStatus(t){
+  const a=$('syncStatus'),b=$('settingsSync');
+  if(a)a.textContent=t;if(b)b.textContent=t;
+}
+async function cloudLoad(){
+  if(!CLOUD_ENABLED){setSyncStatus('Local only');return}
+  setSyncStatus('Connecting...');
+  const {data:rows,error}=await supa.from('uw_requests').select('*').order('ref',{ascending:false});
+  if(error){console.error(error);setSyncStatus('Connection error');return}
+  data=(rows||[]).map(normalizeRow);localStorage.setItem(KEY,JSON.stringify(data));setSyncStatus('Connected');
+  render(); updateReports(); updateFollowups();
+}
+async function cloudUpsert(r){
+  if(!CLOUD_ENABLED)return;
+  const {error}=await supa.from('uw_requests').upsert(r,{onConflict:'ref'});
+  if(error){console.error(error);alert('Cloud save failed: '+error.message);setSyncStatus('Save error');return false}
+  setSyncStatus('Connected');return true;
+}
+async function cloudDeleteAll(){
+  if(!CLOUD_ENABLED)return;
+  const {error}=await supa.from('uw_requests').delete().not('ref','is',null);
+  if(error){alert('Cloud delete failed: '+error.message);return false}
+  return true;
+}
+
+const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  const p=$(id);if(p)p.classList.add('active');
+  document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  if(id==='reportsPage')updateReports();
+  if(id==='followupsPage')updateFollowups();
+}
+function updateReports(){
+  const total=data.length, open=data.filter(r=>!['Issued','Declined'].includes(r.status)).length;
+  const prem=data.reduce((s,r)=>s+(Number(r.quotePremium)||0),0);
+  if($('repTotal'))$('repTotal').textContent=total;
+  if($('repOpen'))$('repOpen').textContent=open;
+  if($('repPremium'))$('repPremium').textContent=prem.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const statuses=['Pending','Quoted','Confirmed','Issued','Declined'];
+  $('statusBars').innerHTML=statuses.map(s=>{
+    const n=data.filter(r=>r.status===s).length,p=total?Math.round(n/total*100):0;
+    return '<div class="barWrap"><div class="barLabel"><span>'+s+'</span><b>'+n+'</b></div><div class="bar"><i style="width:'+p+'%"></i></div></div>';
+  }).join('');
+  const priorities=['Urgent','High','Normal','Low'];
+  const months=[...new Set(data.map(r=>monthKey(r.date)).filter(Boolean))].sort().reverse().slice(0,12);
+  $('monthBars').innerHTML=months.length?months.map(k=>{const n=data.filter(r=>monthKey(r.date)===k).length,p=total?Math.round(n/total*100):0;return '<div class="barWrap"><div class="barLabel"><span>'+monthLabel(k)+'</span><b>'+n+'</b></div><div class="bar"><i style="width:'+p+'%"></i></div></div>';}).join(''):'<div class="muted">No dated requests yet.</div>';
+  $('priorityBars').innerHTML=priorities.map(s=>{
+    const n=data.filter(r=>r.priority===s).length,p=total?Math.round(n/total*100):0;
+    return '<div class="barWrap"><div class="barLabel"><span>'+s+'</span><b>'+n+'</b></div><div class="bar"><i style="width:'+p+'%"></i></div></div>';
+  }).join('');
+}
+function normalizeDate(v){
+  if(v==null||v==='')return null;
+  const m=String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m?m[1]:null;
+}
+function normalizeRow(r){
+  return {...r, date:normalizeDate(r.date)||r.date, follow:normalizeDate(r.follow), expiry:normalizeDate(r.expiry), quoteDeadline:normalizeDate(r.quoteDeadline)};
+}
+function dateDiff(a,b){
+  a=normalizeDate(a); b=normalizeDate(b); if(!a||!b)return NaN;
+  return Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000);
+}
+function dueGroups(field){
+  const t=today();
+  const active=data.filter(r=>r[field]&&!['Issued','Declined'].includes(r.status));
+  return {
+    overdue:active.filter(r=>normalizeDate(r[field])<t).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field)))),
+    today:active.filter(r=>normalizeDate(r[field])===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
+    upcoming:active.filter(r=>normalizeDate(r[field])>t&&dateDiff(r[field],t)<=7).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field))))
+  };
+}
+function rValue(r,field){return normalizeDate(r[field])||''}
+function followupGroups(){return dueGroups('follow')}
+function deadlineGroups(){return dueGroups('quoteDeadline')}
+function updateFollowups(){
+  const g=followupGroups(), d=deadlineGroups();
+  if($('fuOverdue'))$('fuOverdue').textContent=g.overdue.length;
+  if($('fuToday'))$('fuToday').textContent=g.today.length;
+  if($('fuUpcoming'))$('fuUpcoming').textContent=g.upcoming.length;
+  const section=(title,items,field)=>{
+    if(!items.length)return '';
+    return '<div class="followupSection"><h3>'+title+'</h3>'+items.map(r=>{
+      const dt=normalizeDate(r[field]); const diff=dateDiff(dt,today());
+      const type=diff<0?'overdue':diff===0?'today':'upcoming';
+      const label=type==='overdue'?'Overdue by '+Math.abs(diff)+' day'+(Math.abs(diff)===1?'':'s'):type==='today'?'Due today':'Due in '+diff+' day'+(diff===1?'':'s');
+      const kind=field==='follow'?'Follow-up':'Quotation deadline';
+      return '<div class="followupItem '+type+'"><div><b>#'+r.ref+' — '+esc(r.client)+'</b><div class="followupMeta">'+esc(r.agent||'')+' · '+esc(r.status||'')+' · '+kind+': '+esc(dt)+'</div></div><div class="followupAction"><span class="reminderBadge '+type+'">'+label+'</span> <button class="secondary" onclick="edit('+Number(r.ref)+')">Open</button></div></div>';
+    }).join('')+'</div>';
+  };
+  const html=section('Follow-ups — Overdue',g.overdue,'follow')+section('Follow-ups — Due Today',g.today,'follow')+section('Follow-ups — Next 7 Days',g.upcoming,'follow')+section('Quotation Deadlines — Overdue',d.overdue,'quoteDeadline')+section('Quotation Deadlines — Today',d.today,'quoteDeadline')+section('Quotation Deadlines — Next 7 Days',d.upcoming,'quoteDeadline');
+  $('followupList').innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups or quotation deadlines scheduled.</div>';
+  updateNotificationButton();
+}
+function updateNotificationButton(){
+  const b=$('notifyBtn'); if(!b)return;
+  if(!('Notification' in window)){b.textContent='Notifications unavailable';b.disabled=true;return}
+  if(Notification.permission==='granted')b.textContent='Notifications Enabled';
+  else if(Notification.permission==='denied')b.textContent='Notifications Blocked';
+  else b.textContent='Enable Notifications';
+}
+async function enableNotifications(){
+  if(!('Notification' in window)){alert('This browser does not support notifications. The Follow-up Reminder Center will still work inside UW Pro.');return}
+  try{
+    const p=await Notification.requestPermission();
+    updateNotificationButton();
+    if(p==='granted'){sendFollowupNotifications(true);alert('Follow-up notifications enabled.');}
+    else if(p==='denied')alert('Notifications are blocked in this browser. You can still use the reminder panel inside UW Pro.');
+  }catch(e){console.error(e);}
+}
+function sendFollowupNotifications(force){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const g=followupGroups(), d=deadlineGroups();
+  const key='uwpro_last_notified_'+today();
+  if(!force&&localStorage.getItem(key))return;
+  if(g.overdue.length||g.today.length||d.overdue.length||d.today.length){
+    const parts=[];
+    if(g.overdue.length)parts.push(g.overdue.length+' overdue follow-up'+(g.overdue.length===1?'':'s'));
+    if(g.today.length)parts.push(g.today.length+' follow-up'+(g.today.length===1?'':'s')+' due today');
+    if(d.overdue.length)parts.push(d.overdue.length+' overdue deadline'+(d.overdue.length===1?'':'s'));
+    if(d.today.length)parts.push(d.today.length+' deadline'+(d.today.length===1?'':'s')+' due today');
+    try{new Notification('UW Pro Follow-up Reminder',{body:parts.join(' · ')+' — open UW Pro to review.'});}catch(e){}
+    localStorage.setItem(key,'1');
+  }
+}
+
+function login(){if($('user').value==='admin'&&$('pass').value==='UWPro@2026'){sessionStorage.uw=1;$('login').classList.add('hidden');$('who').textContent='Admin'}else alert('Invalid username or password');}
+function logout(){sessionStorage.removeItem('uw');location.reload()}
+if(sessionStorage.uw){$('login').classList.add('hidden');$('who').textContent='Admin'}
+function badge(s){return '<span class="badge '+s.toLowerCase()+'">'+s+'</span>'}
+function pb(p){return '<span class="badge '+p.toLowerCase()+'">'+p+'</span>'}
+function rank(p){return ({Urgent:0,High:1,Normal:2,Low:3}[p]??4)}
+function monthKey(v){if(!v)return '';const m=String(v).slice(0,7);return /^\d{4}-\d{2}$/.test(m)?m:''}
+function monthLabel(v){const k=monthKey(v);if(!k)return '';const d=new Date(k+'-01T00:00:00');return d.toLocaleDateString('en-US',{month:'short',year:'numeric'})}
+function ageingDays(v){if(!v)return '';const a=new Date(v+'T00:00:00');const b=new Date(today()+'T00:00:00');return Math.max(0,Math.floor((b-a)/86400000))}
+function refreshMonthFilter(){const el=$('monthFilter');if(!el)return;const current=el.value;const keys=[...new Set(data.map(r=>monthKey(r.date)).filter(Boolean))].sort().reverse();el.innerHTML='<option value="">All Months</option>'+keys.map(k=>'<option value="'+k+'">'+monthLabel(k)+'</option>').join('');el.value=keys.includes(current)?current:''}
+function render(){
+ refreshMonthFilter();
+ let q=$('search').value.toLowerCase(),sf=$('statusFilter').value,pf=$('priorityFilter').value,bf=$('businessFilter').value,mf=$('monthFilter').value;
+ let rows=[...data].sort((a,b)=>rank(a.priority)-rank(b.priority)||b.ref-a.ref).filter(r=>
+ (!q||[r.ref,r.client,r.agent,r.cover].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf)&&(!bf||r.business===bf)&&(!mf||monthKey(r.date)===mf));
+ $('rows').innerHTML=rows.length?rows.map(r=>'<tr><td>#'+r.ref+'</td><td>'+r.date+'</td><td>'+monthLabel(r.date)+'</td><td>'+esc(r.agent)+'</td><td>'+esc(r.client)+'</td><td>'+esc(r.phone||'')+'</td><td>'+r.business+'</td><td>'+esc(r.cover)+'</td><td>'+formatMoney(r.sumInsured)+'</td><td>'+pb(r.priority)+'</td><td>'+badge(r.status)+'</td><td>'+r.follow+'</td><td><button class="secondary" onclick="edit('+r.ref+')">Edit</button></td></tr>').join(''):'<tr><td colspan="13" style="text-align:center;padding:25px">No requests found.</td></tr>';
+ $('total').textContent=data.length;$('quoted').textContent=data.filter(r=>r.status==='Quoted').length;$('confirmed').textContent=data.filter(r=>r.status==='Confirmed').length;
+ $('due').textContent=data.filter(r=>r.follow&&r.follow<=today()&&!['Issued','Declined'].includes(r.status)).length;
+ $('overdue').textContent=data.filter(r=>r.quoteDeadline&&r.quoteDeadline<today()&&!['Issued','Declined'].includes(r.status)).length;
+ $('pu').textContent=data.filter(r=>r.priority==='Urgent').length;$('ph').textContent=data.filter(r=>r.priority==='High').length;$('pn').textContent=data.filter(r=>r.priority==='Normal').length;$('pl').textContent=data.filter(r=>r.priority==='Low').length;
+}
+function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function numOrNull(v){const t=String(v??'').trim();return t===''?null:Number(t)}
+function dateOrNull(v){const t=String(v??'').trim();return t===''?null:t}
+function newRequest(){showPage('mainPage',document.querySelector('.navBtn'));editing=null;$('editorTitle').textContent='New Request';clearForm();$('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);$('date').value=today();$('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
+function clearForm(){['agent','client','phone','email','cover','sumInsured','follow','members','expiry','prevPremium','quotePremium','prevInsurer','prevPolicy','policyType','quoteDeadline','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
+function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
+async function save(){
+let r={
+ref:Number($('ref').value),date:$('date').value,agent:$('agent').value,client:$('client').value,
+phone:$('phone').value,email:$('email').value,business:$('business').value,cover:$('cover').value,
+sumInsured:numOrNull($('sumInsured').value),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),
+members:numOrNull($('members').value),expiry:dateOrNull($('expiry').value),prevPremium:numOrNull($('prevPremium').value),quotePremium:numOrNull($('quotePremium').value),
+prevInsurer:$('prevInsurer').value,prevPolicy:$('prevPolicy').value,policyType:$('policyType').value,
+quoteDeadline:dateOrNull($('quoteDeadline').value),remarks:$('remarks').value
+};
+if(!r.client||!r.agent||!r.date){alert('Please fill Date, Agent and Client.');return}
+if(editing){data[data.findIndex(x=>x.ref===editing)]=r}else data.push(r);
+localStorage.setItem(KEY,JSON.stringify(data));
+if(CLOUD_ENABLED){const ok=await cloudUpsert(r);if(!ok)return}
+closeEditor();updateReports();updateFollowups()
+}
+function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
+function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+async function clearAllData(){
+if(!data.length){alert('There is no saved data to clear.');return}
+if(confirm('Delete all saved underwriting requests? This cannot be undone.')){
+  if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
+  data=[];localStorage.removeItem(KEY);render();updateReports();updateFollowups()
+}}
+async function exportExcel(){
+  if(!data.length){alert('No requests to export.');return}
+  if(!window.ExcelJS){
+    await new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+      s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
+    }).catch(()=>{});
+  }
+  if(!window.ExcelJS){alert('Excel export library could not load. Please check your internet connection and try again.');return}
+
+  const headers=['S.No.','Reference No.','Request Date','Month','Ageing (Days)','Agent / Broker','Client / Insured','Phone','Email','Business Type','Cover Type','Sum Insured','Priority','Status','Follow-up Date','Members','Policy Expiry','Previous Premium','Quoted Premium','Previous Insurer','Previous Policy No.','Policy / Risk Type','Quotation Deadline','Remarks'];
+  const body=data.map((r,i)=>[
+    i+1,r.ref,r.date,monthLabel(r.date),ageingDays(r.date),r.agent,r.client,r.phone||'',r.email||'',r.business,r.cover,r.sumInsured==null?'':r.sumInsured,r.priority,r.status,r.follow||'',r.members==null?'':r.members,r.expiry||'',r.prevPremium==null?'':r.prevPremium,r.quotePremium==null?'':r.quotePremium,r.prevInsurer,r.prevPolicy,r.policyType,r.quoteDeadline||'',r.remarks||''
+  ]);
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator='UW Pro';
+  wb.created=new Date();
+  wb.modified=new Date();
+  const ws=wb.addWorksheet('Underwriting',{
+    views:[{state:'frozen',ySplit:1}]
+  });
+
+  ws.addRow(headers);
+  body.forEach(row=>ws.addRow(row));
+
+  const headerFill='1F4E78';
+  const headerFont='FFFFFF';
+  const borderColor='B7C3D0';
+  const thinBorder={top:{style:'thin',color:{argb:borderColor}},bottom:{style:'thin',color:{argb:borderColor}},left:{style:'thin',color:{argb:borderColor}},right:{style:'thin',color:{argb:borderColor}}};
+
+  ws.getRow(1).height=28;
+  ws.getRow(1).eachCell(cell=>{
+    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:headerFill}};
+    cell.font={bold:true,color:{argb:headerFont},size:11};
+    cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    cell.border=thinBorder;
+  });
+
+  const widths=[8,14,14,14,13,20,26,17,28,20,22,16,12,13,15,10,15,16,16,20,22,18,20,35];
+  widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+
+  for(let r=2;r<=ws.rowCount;r++){
+    const row=ws.getRow(r);
+    row.height=22;
+    row.eachCell((cell,col)=>{
+      cell.border=thinBorder;
+      cell.alignment={vertical:'middle',wrapText:col===24};
+    });
+    [12,18,19].forEach(col=>{ row.getCell(col).numFmt='#,##0.00'; });
+    [3,15,17,23].forEach(col=>{ if(row.getCell(col).value) row.getCell(col).numFmt='dd-mmm-yyyy'; });
+
+    const status=String(row.getCell(14).value||'');
+    const priority=String(row.getCell(13).value||'');
+    const statusColors={
+      Pending:'FFF2CC',
+      Quoted:'FFF2CC',
+      Confirmed:'D9EAF7',
+      Issued:'E2F0D9',
+      Declined:'F4CCCC'
+    };
+    const priorityColors={
+      Urgent:'F4CCCC',
+      High:'FCE4D6',
+      Normal:'E7E6E6',
+      Low:'F2F2F2'
+    };
+    if(statusColors[status]){
+      const cell=row.getCell(14);
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:statusColors[status]}};
+      cell.font={bold:true};
+      cell.alignment={horizontal:'center',vertical:'middle'};
+    }
+    if(priorityColors[priority]){
+      const cell=row.getCell(13);
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:priorityColors[priority]}};
+      cell.font={bold:true};
+      cell.alignment={horizontal:'center',vertical:'middle'};
+    }
+  }
+
+  ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:headers.length}};
+  ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:'A4'};
+  ws.pageMargins={left:0.25,right:0.25,top:0.5,bottom:0.5,header:0.2,footer:0.2};
+  ws.headerFooter.oddFooter='Page &P of &N';
+
+  const report=wb.addWorksheet('Monthly Summary');
+  report.getColumn(1).width=18; report.getColumn(2).width=18; report.getColumn(3).width=18;
+  report.addRow(['Month','Requests','Quoted Premium']);
+  const months={};
+  data.forEach(r=>{const m=monthLabel(r.date)||'Unknown'; if(!months[m])months[m]={count:0,premium:0}; months[m].count++; months[m].premium+=Number(r.quotePremium)||0;});
+  Object.keys(months).sort((a,b)=>a.localeCompare(b)).forEach(m=>report.addRow([m,months[m].count,months[m].premium]));
+  report.getRow(1).height=26;
+  report.getRow(1).eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:headerFill}};cell.font={bold:true,color:{argb:headerFont}};cell.alignment={horizontal:'center'};cell.border=thinBorder;});
+  for(let r=2;r<=report.rowCount;r++){report.getRow(r).eachCell(c=>c.border=thinBorder);report.getCell(r,3).numFmt='#,##0.00';}
+  report.autoFilter={from:{row:1,column:1},to:{row:report.rowCount,column:3}};
+  report.views=[{state:'frozen',ySplit:1}];
+
+  const buffer=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='UW_Pro_Underwriting_Report.xlsx';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+render();
+updateReports();
+updateFollowups();
+if(CLOUD_ENABLED) cloudLoad(); else setSyncStatus('Local only');
+setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
+setInterval(()=>{updateFollowups();sendFollowupNotifications(false);},60000);
+</script>
+</body></html>
