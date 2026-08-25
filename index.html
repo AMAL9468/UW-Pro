@@ -46,6 +46,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 .followupSection{margin-bottom:18px}.followupSection h3{margin:0 0 10px;font-size:14px}.followupItem{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:8px;background:#fff}.followupItem.overdue{border-left:5px solid #dc2626}.followupItem.today{border-left:5px solid #d97706}.followupItem.upcoming{border-left:5px solid #2563eb}.followupMeta{font-size:12px;color:#64748b;margin-top:4px}.followupAction{white-space:nowrap}.reminderBadge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}.reminderBadge.overdue{background:#fee2e2;color:#b91c1c}.reminderBadge.today{background:#fef3c7;color:#92400e}.reminderBadge.upcoming{background:#dbeafe;color:#1d4ed8}
 @media(max-width:800px){.sidebar{width:72px;padding:14px 8px}.sideBrand{font-size:0;text-align:center}.sideBrand:before{content:'UW';font-size:18px}.sideBrand span{display:none}.navBtn{font-size:0;text-align:center;padding:13px 5px}.navBtn:before{content:'•';font-size:20px}.sideBottom{display:none}.mainShell{margin-left:72px}.reportGrid{grid-template-columns:1fr}.quickGrid{grid-template-columns:1fr}}
 
+.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -67,6 +68,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   <button class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
   <button class="navBtn" onclick="showPage('requestsPage',this)">Requests</button>
   <button class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
+  <button class="navBtn" onclick="showPage('usersPage',this)">Users</button>
   <button class="navBtn" onclick="showPage('settingsPage',this)">Settings</button>
   <div class="sideBottom"><span class="statusDot"></span> Cloud sync<br><span id="syncStatus">Not configured</span></div>
 </aside>
@@ -137,7 +139,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   <div class="card" style="margin-bottom:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <div><h2 class="sectionTitle" style="margin-bottom:4px">Follow-up Reminder Center</h2><div class="muted">See overdue, today's and upcoming follow-ups in one place.</div></div>
-      <button id="refreshFuBtn" class="secondary" onclick="refreshFollowups()">Refresh</button><button id="notifyBtn" class="secondary" onclick="enableNotifications()">Enable Notifications</button>
+      <button id="notifyBtn" class="secondary" onclick="enableNotifications()">Enable Notifications</button>
     </div>
     <div class="grid" style="margin-top:14px;grid-template-columns:repeat(3,1fr)">
       <div class="smallCard"><div class="muted">Overdue</div><div class="num" id="fuOverdue">0</div></div>
@@ -146,6 +148,29 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
     </div>
   </div>
   <div class="card"><div id="followupList" class="muted">No follow-ups scheduled.</div></div>
+</div>
+
+<div id="usersPage" class="page">
+  <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">User Management</h2><div class="muted">Manage UW Pro roles and permissions. This page is visible to the Main Admin. For production login security, connect these users to Supabase Auth before assigning real passwords.</div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="actions" style="margin-top:0"><button class="primary" onclick="openUserForm()">+ Create User</button><button class="secondary" onclick="loadUsers()">Refresh</button></div>
+    <div class="tableWrap" style="margin-top:14px"><table style="min-width:850px"><thead><tr><th>User</th><th>Role</th><th>Main</th><th>Reports</th><th>Requests</th><th>Follow-ups</th><th>Status</th><th>Action</th></tr></thead><tbody id="userRows"></tbody></table></div>
+  </div>
+  <div id="userForm" class="card hidden">
+    <h3 class="sectionTitle">Create / Edit User</h3>
+    <div class="form">
+      <div><label>Username</label><input id="uName" placeholder="e.g. john"></div>
+      <div><label>Email</label><input id="uEmail" type="email" placeholder="john@company.com"></div>
+      <div><label>Temporary Password</label><input id="uPass" type="password" placeholder="Minimum 6 characters"></div>
+      <div><label>Role</label><select id="uRole" onchange="applyRoleDefaults()"><option>Underwriter</option><option>Viewer</option><option>Custom</option></select></div>
+      <div><label>Status</label><select id="uActive"><option value="true">Active</option><option value="false">Disabled</option></select></div>
+      <div><label>Permission Summary</label><input id="uPermSummary" readonly></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
+      <label><input type="checkbox" id="pMain"> Main</label><label><input type="checkbox" id="pReports"> Reports</label><label><input type="checkbox" id="pRequests"> Requests</label><label><input type="checkbox" id="pFollow"> Follow-ups</label><label><input type="checkbox" id="pExport"> Excel Export</label><label><input type="checkbox" id="pEdit"> Create/Edit</label><label><input type="checkbox" id="pDelete"> Delete</label>
+    </div>
+    <div class="actions"><button class="primary" onclick="saveUser()">Save User</button><button class="secondary" onclick="closeUserForm()">Cancel</button></div>
+  </div>
 </div>
 
 <div id="settingsPage" class="page">
@@ -210,7 +235,6 @@ async function cloudLoad(){
   const {data:rows,error}=await supa.from('uw_requests').select('*').order('ref',{ascending:false});
   if(error){console.error(error);setSyncStatus('Connection error');return}
   data=(rows||[]).map(normalizeRow);localStorage.setItem(KEY,JSON.stringify(data));setSyncStatus('Connected');
-  console.log('UW Pro cloud rows loaded:', data.length, data.map(r=>({ref:r.ref,follow:r.follow,quoteDeadline:r.quoteDeadline,status:r.status})));
   render(); updateReports(); updateFollowups();
 }
 async function cloudUpsert(r){
@@ -226,7 +250,30 @@ async function cloudDeleteAll(){
   return true;
 }
 
-const $=id=>document.getElementById(id), today=()=>{const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`};
+const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
+
+let editingUser=null;
+const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,export:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,export:false,edit:false,del:false}};
+function applyRoleDefaults(){const r=$('uRole').value,p=DEFAULT_PERMS[r]||DEFAULT_PERMS.Custom;['Main','Reports','Requests','Follow','Export','Edit','Delete'].forEach((x,i)=>{const el=$('p'+x);if(el)el.checked=!!p[['main','reports','requests','followups','export','edit','del'][i]]});updatePermSummary()}
+function updatePermSummary(){const names=[['pMain','Main'],['pReports','Reports'],['pRequests','Requests'],['pFollow','Follow-ups'],['pExport','Excel'],['pEdit','Edit'],['pDelete','Delete']];$('uPermSummary').value=names.filter(x=>$(x[0])?.checked).map(x=>x[1]).join(', ')||'None'}
+function openUserForm(u=null){editingUser=u?.id||null;$('userForm').classList.remove('hidden');$('uName').value=u?.username||'';$('uEmail').value=u?.email||'';$('uPass').value='';$('uRole').value=u?.role||'Underwriter';$('uActive').value=String(u?.active!==false);const p=u?.permissions||DEFAULT_PERMS[$('uRole').value]||DEFAULT_PERMS.Custom;[['pMain','main'],['pReports','reports'],['pRequests','requests'],['pFollow','followups'],['pExport','export'],['pEdit','edit'],['pDelete','del']].forEach(([id,k])=>$(id).checked=!!p[k]);updatePermSummary();window.scrollTo({top:0,behavior:'smooth'})}
+function closeUserForm(){$('userForm').classList.add('hidden');editingUser=null}
+async function loadUsers(){
+ if(!CLOUD_ENABLED){$('userRows').innerHTML='<tr><td colspan="8">Supabase cloud is not configured.</td></tr>';return}
+ const {data:rows,error}=await supa.from('uw_users').select('*').order('username');
+ if(error){$('userRows').innerHTML='<tr><td colspan="8">Create the uw_users table using the supplied SQL first.</td></tr>';return}
+ $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
+}
+async function saveUser(){
+ const username=$('uName').value.trim(),email=$('uEmail').value.trim(),role=$('uRole').value; if(!username||!email){alert('Username and email are required.');return}
+ const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
+ const row={username,email,role,active:$('uActive').value==='true',permissions};
+ if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
+ if(editingUser) row.id=editingUser;
+ const {error}=await supa.from('uw_users').upsert(row,{onConflict:'id'}); if(error){alert('User save failed: '+error.message);return}
+ closeUserForm();loadUsers();
+}
+function userCan(permission){return true}
 
 function showPage(id,btn){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
@@ -235,6 +282,7 @@ function showPage(id,btn){
   if(btn)btn.classList.add('active');
   if(id==='reportsPage')updateReports();
   if(id==='followupsPage')updateFollowups();
+  if(id==='usersPage')loadUsers();
 }
 function updateReports(){
   const total=data.length, open=data.filter(r=>!['Issued','Declined'].includes(r.status)).length;
@@ -261,9 +309,7 @@ function normalizeDate(v){
   return m?m[1]:null;
 }
 function normalizeRow(r){
-  const followRaw = r.follow ?? r.follow_up_date ?? r.followUpDate ?? r.followup_date ?? null;
-  const deadlineRaw = r.quoteDeadline ?? r.quote_deadline ?? r.quotation_deadline ?? r.quotationDeadline ?? null;
-  return {...r, date:normalizeDate(r.date)||r.date, follow:normalizeDate(followRaw), expiry:normalizeDate(r.expiry), quoteDeadline:normalizeDate(deadlineRaw)};
+  return {...r, date:normalizeDate(r.date)||r.date, follow:normalizeDate(r.follow), expiry:normalizeDate(r.expiry), quoteDeadline:normalizeDate(r.quoteDeadline)};
 }
 function dateDiff(a,b){
   a=normalizeDate(a); b=normalizeDate(b); if(!a||!b)return NaN;
@@ -271,14 +317,11 @@ function dateDiff(a,b){
 }
 function dueGroups(field){
   const t=today();
-  const active=data.filter(r=>{
-    const d=normalizeDate(r[field]);
-    return !!d && !['Issued','Declined'].includes(String(r.status||''));
-  });
+  const active=data.filter(r=>r[field]&&!['Issued','Declined'].includes(r.status));
   return {
-    overdue:active.filter(r=>normalizeDate(r[field])<t).sort((a,b)=>rValue(a,field).localeCompare(rValue(b,field))),
+    overdue:active.filter(r=>normalizeDate(r[field])<t).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field)))),
     today:active.filter(r=>normalizeDate(r[field])===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
-    upcoming:active.filter(r=>{const d=normalizeDate(r[field]); return d>t && dateDiff(d,t)<=7;}).sort((a,b)=>rValue(a,field).localeCompare(rValue(b,field)))
+    upcoming:active.filter(r=>normalizeDate(r[field])>t&&dateDiff(r[field],t)<=7).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field))))
   };
 }
 function rValue(r,field){return normalizeDate(r[field])||''}
@@ -300,10 +343,9 @@ function updateFollowups(){
     }).join('')+'</div>';
   };
   const html=section('Follow-ups — Overdue',g.overdue,'follow')+section('Follow-ups — Due Today',g.today,'follow')+section('Follow-ups — Next 7 Days',g.upcoming,'follow')+section('Quotation Deadlines — Overdue',d.overdue,'quoteDeadline')+section('Quotation Deadlines — Today',d.today,'quoteDeadline')+section('Quotation Deadlines — Next 7 Days',d.upcoming,'quoteDeadline');
-  $('followupList').innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups or quotation deadlines scheduled.<br><small>Use Refresh after saving a request. Follow-up dates are read directly from the cloud data.</small></div>';
+  $('followupList').innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups or quotation deadlines scheduled.</div>';
   updateNotificationButton();
 }
-function refreshFollowups(){ updateFollowups(); if(CLOUD_ENABLED) cloudLoad(); }
 function updateNotificationButton(){
   const b=$('notifyBtn'); if(!b)return;
   if(!('Notification' in window)){b.textContent='Notifications unavailable';b.disabled=true;return}
@@ -493,6 +535,7 @@ async function exportExcel(){
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
+['pMain','pReports','pRequests','pFollow','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
 render();
 updateReports();
 updateFollowups();
