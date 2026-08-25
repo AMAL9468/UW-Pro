@@ -220,7 +220,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   <div class="card">
     <h2 class="sectionTitle">System Settings</h2>
     <p class="muted">Cloud database status: <b id="settingsSync">Not configured</b></p>
-    <p class="muted">Supabase cloud sync is configured for this project. Make sure the UW Pro SQL schema has been run in Supabase before saving data.</p>
+    <p class="muted">Supabase cloud sync is configured for this project. Shared cloud data is the source of truth; browser history is refreshed from Supabase after login, focus and every 15 seconds.</p>
   </div>
 </div>
 
@@ -272,48 +272,72 @@ function setSyncStatus(t){
   const a=$('syncStatus'),b=$('settingsSync');
   if(a)a.textContent=t;if(b)b.textContent=t;
 }
-async function cloudLoad(){
-  if(!CLOUD_ENABLED){setSyncStatus('Local only');return}
-  setSyncStatus('Connecting...');
-  const {data:rows,error}=await supa.from('uw_requests').select('*').order('ref',{ascending:false});
-  if(error){console.error(error);setSyncStatus('Connection error');return}
-  data=(rows||[]).map(normalizeRow);localStorage.setItem(KEY,JSON.stringify(data));setSyncStatus('Connected');
-  render(); updateReports(); updateFollowups();
+async function cloudLoad(showError=false){
+  if(!CLOUD_ENABLED){setSyncStatus('Local only');return false}
+  if(syncBusy)return false;
+  syncBusy=true;
+  setSyncStatus('Syncing...');
+  try{
+    const {data:rows,error}=await supa.from('uw_requests').select('*').order('ref',{ascending:false});
+    if(error){
+      console.error(error);
+      setSyncStatus('Cloud read error');
+      if(showError) alert('Cloud sync failed: '+error.message);
+      return false;
+    }
+    // Cloud is the source of truth. Never merge stale browser history into it.
+    data=(rows||[]).map(normalizeRow);
+    localStorage.setItem(KEY,JSON.stringify(data));
+    setSyncStatus('Connected');
+    render(); updateReports(); updateFollowups();
+    return true;
+  }finally{syncBusy=false}
 }
 async function cloudUpsert(r){
-  if(!CLOUD_ENABLED)return;
-  const {error}=await supa.from('uw_requests').upsert(r,{onConflict:'ref'});
-  if(error){console.error(error);alert('Cloud save failed: '+error.message);setSyncStatus('Save error');return false}
-  setSyncStatus('Connected');return true;
+  if(!CLOUD_ENABLED)return true;
+  const {data:saved,error}=await supa.from('uw_requests').upsert(r,{onConflict:'ref'}).select().single();
+  if(error){
+    console.error(error);
+    setSyncStatus('Save error');
+    alert('Cloud save failed: '+error.message);
+    return false;
+  }
+  setSyncStatus('Connected');
+  return !!saved;
 }
 async function cloudDeleteAll(){
   if(!CLOUD_ENABLED)return true;
-  // GLOBAL delete: remove shared underwriting requests from Supabase.
   const {error}=await supa.from('uw_requests').delete().not('ref','is',null);
-  if(error){alert('Cloud request delete failed: '+error.message);return false}
-  // GLOBAL delete: remove shared claims as well.
-  const {error:claimError}=await supa.from('uw_claims').delete().not('serial_no','is',null);
-  if(claimError){alert('Cloud claim delete failed: '+claimError.message);return false}
+  if(error){setSyncStatus('Delete error');alert('Cloud delete failed: '+error.message);return false}
   return true;
 }
-
-let sharedRealtimeChannel=null;
-function startSharedRealtime(){
-  if(!CLOUD_ENABLED||sharedRealtimeChannel)return;
-  sharedRealtimeChannel=supa.channel('uwpro-shared-data-sync')
-    .on('postgres_changes',{event:'*',schema:'public',table:'uw_requests'},async()=>{
-      await cloudLoad();
-    })
-    .on('postgres_changes',{event:'*',schema:'public',table:'uw_claims'},async()=>{
-      await loadClaims();
-    })
-    .subscribe();
+async function cloudDeleteClaimAll(){
+  if(!CLOUD_ENABLED)return true;
+  const {error}=await supa.from('uw_claims').delete().not('serial_no','is',null);
+  if(error){setSyncStatus('Claims delete error');alert('Cloud claims delete failed: '+error.message);return false}
+  return true;
 }
-
-async function refreshSharedData(){
-  if(!CLOUD_ENABLED)return;
-  await cloudLoad();
-  if(document.getElementById('claimsPage')?.classList.contains('active')) await loadClaims();
+async function verifyGlobalDeletion(){
+  if(!CLOUD_ENABLED)return {requests:0,claims:0,verified:true};
+  const [{data:reqs,error:reqErr},{data:cls,error:claimErr}]=await Promise.all([
+    supa.from('uw_requests').select('ref'),
+    supa.from('uw_claims').select('serial_no')
+  ]);
+  if(reqErr||claimErr){
+    console.error(reqErr||claimErr);
+    return {verified:false,requests:null,claims:null,error:(reqErr||claimErr).message};
+  }
+  return {verified:(reqs||[]).length===0&&(cls||[]).length===0,requests:(reqs||[]).length,claims:(cls||[]).length};
+}
+function startRealtimeSync(){
+  if(!CLOUD_ENABLED||realtimeChannel)return;
+  realtimeChannel=supa.channel('uwpro-global-sync-v3')
+    .on('postgres_changes',{event:'*',schema:'public',table:'uw_requests'},()=>cloudLoad(false))
+    .on('postgres_changes',{event:'*',schema:'public',table:'uw_claims'},()=>loadClaims())
+    .subscribe((status)=>{
+      if(status==='SUBSCRIBED')setSyncStatus('Connected • Live sync');
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setSyncStatus('Connected • polling');
+    });
 }
 
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
@@ -348,36 +372,45 @@ async function deleteUser(userId){
  }
 }
 async function saveUser(){
- const username=$('uName').value.trim(),email=$('uEmail').value.trim(),password=$('uPass').value,role=$('uRole').value;
- if(!username||!email){alert('Username and email are required.');return}
- if(!editingUser && password.length<6){alert('For a new user, password must be at least 6 characters.');return}
- const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,claims:$('pClaims').checked,claimsExport:$('pClaimsExport').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
- if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
- try{
-   if(editingUser){
-     const row={id:editingUser,username,email,role,active:$('uActive').value==='true',permissions};
-     const {error}=await supa.from('uw_users').upsert(row,{onConflict:'id'});
-     if(error)throw error;
-     // Password changes are intentionally not stored in the database.
-     if(password) alert('User details updated. To change the login password, use Supabase Auth password reset.');
-   }else{
-     // Create a real Supabase Auth account. The password never enters uw_users.
-     const {data:authData,error:authError}=await supa.auth.signUp({email,password});
-     if(authError)throw authError;
-     const row={username,email,role,active:$('uActive').value==='true',permissions};
-     const {error:rowError}=await supa.from('uw_users').insert(row);
-     if(rowError)throw rowError;
-     // Do not leave the browser logged in as the newly-created user.
-     try{await supa.auth.signOut()}catch(e){}
-     alert(authData?.session
-       ? 'User created successfully. They can now log in with the email/username and password.'
-       : 'User created. If Supabase email confirmation is enabled, they must confirm the email before first login.');
-   }
-   closeUserForm();await loadUsers();
- }catch(e){
-   console.error(e);
-   alert('User save failed: '+(e?.message||e));
- }
+  const username=$('uName').value.trim(),email=$('uEmail').value.trim(),password=$('uPass').value,role=$('uRole').value;
+  if(!username||!email){alert('Username and email are required.');return}
+  if(!editingUser && password.length<6){alert('For a new user, password must be at least 6 characters.');return}
+  if(!isMainAdmin){alert('Main Admin access only.');return}
+  const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,claims:$('pClaims').checked,claimsExport:$('pClaimsExport').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
+  if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
+  try{
+    if(editingUser){
+      const row={id:editingUser,username,email,role,active:$('uActive').value==='true',permissions};
+      const {error}=await supa.from('uw_users').upsert(row,{onConflict:'id'});
+      if(error)throw error;
+      alert('User details updated successfully.');
+    }else{
+      // Preserve the current Main Admin session while creating the new Auth user.
+      const {data:before}=await supa.auth.getSession();
+      const adminSession=before?.session||null;
+      const {data:authData,error:authError}=await supa.auth.signUp({email,password});
+      if(authError)throw authError;
+      const row={username,email,role,active:$('uActive').value==='true',permissions};
+      const {error:rowError}=await supa.from('uw_users').insert(row);
+      if(rowError)throw rowError;
+      // signUp can replace the browser session when email confirmation is disabled.
+      // Restore the original Main Admin session instead of logging the admin out.
+      if(adminSession){
+        const {error:restoreError}=await supa.auth.setSession({
+          access_token:adminSession.access_token,
+          refresh_token:adminSession.refresh_token
+        });
+        if(restoreError)console.warn('Admin session restore warning:',restoreError);
+      }
+      alert(authData?.session
+        ? 'User created successfully. The Main Admin session was preserved.'
+        : 'User created successfully. They can now log in with the email/username and password.');
+    }
+    closeUserForm();await loadUsers();
+  }catch(e){
+    console.error(e);
+    alert('User save failed: '+(e?.message||e));
+  }
 }
 
 function userCan(permission){return true}
@@ -492,6 +525,27 @@ function sendFollowupNotifications(force){
 let currentUser=null;
 let currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true};
 let isMainAdmin=false;
+let realtimeChannel=null;
+let syncBusy=false;
+let requestSaving=false;
+let claimSaving=false;
+const SESSION_USER_KEY='uwpro_session_user_v2';
+
+function cacheSessionUser(){
+  if(currentUser) sessionStorage.setItem(SESSION_USER_KEY,JSON.stringify({
+    username:currentUser.username||'Admin',
+    email:currentUser.email||'',
+    role:currentUser.role||'Main Admin',
+    active:currentUser.active!==false,
+    permissions:currentPerms||{}
+  }));
+}
+function getCachedSessionUser(){
+  try{return JSON.parse(sessionStorage.getItem(SESSION_USER_KEY)||'null')}catch(e){return null}
+}
+function clearSessionState(){
+  sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');sessionStorage.removeItem(SESSION_USER_KEY);
+}
 
 async function login(){
   const identifier=$('user').value.trim(), password=$('pass').value;
@@ -500,7 +554,7 @@ async function login(){
   if(identifier==='admin'&&password==='UWPro@2026'){
     isMainAdmin=true; currentUser={username:'Admin',email:''};
     currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true};
-    sessionStorage.uw=1; sessionStorage.userEmail=''; sessionStorage.isAdmin='1';
+    sessionStorage.uw=1; sessionStorage.userEmail=''; sessionStorage.isAdmin='1'; cacheSessionUser();
     $('login').classList.add('hidden'); $('who').textContent='Admin';
     applyPermissions(); return;
   }
@@ -521,7 +575,7 @@ async function login(){
     currentUser=lookup.data;
     currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(lookup.data.permissions||{})};
     isMainAdmin=lookup.data.role==='Main Admin';
-    sessionStorage.uw=1; sessionStorage.userEmail=lookup.data.email; sessionStorage.isAdmin=isMainAdmin?'1':'0';
+    sessionStorage.uw=1; sessionStorage.userEmail=lookup.data.email; sessionStorage.isAdmin=isMainAdmin?'1':'0'; cacheSessionUser();
     $('login').classList.add('hidden'); $('who').textContent=lookup.data.username;
     applyPermissions();
     showPage('mainPage',document.querySelector('.navBtn'));
@@ -553,24 +607,69 @@ if(CLOUD_ENABLED)supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECO
 
 async function logout(){
   try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
-  sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');location.reload();
+  clearSessionState();location.reload();
 }
 async function restoreSession(){
   if(sessionStorage.uw!=='1')return;
   if(sessionStorage.isAdmin==='1'){
-    isMainAdmin=true; currentUser={username:'Admin',email:''};
+    isMainAdmin=true; currentUser={username:'Admin',email:'',role:'Main Admin',active:true};
     currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true};
     $('login').classList.add('hidden');$('who').textContent='Admin';applyPermissions();return;
   }
-  if(!CLOUD_ENABLED){sessionStorage.clear();return}
-  const {data:sessionData}=await supa.auth.getSession();
-  if(!sessionData?.session){sessionStorage.clear();return}
-  const email=sessionData.session.user.email;
-  const {data:u}=await supa.from('uw_users').select('*').eq('email',email).maybeSingle();
-  if(!u||u.active===false){await supa.auth.signOut();sessionStorage.clear();return}
-  currentUser=u;currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
-  isMainAdmin=u.role==='Main Admin';$('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
+  if(!CLOUD_ENABLED){clearSessionState();return}
+  try{
+    const {data:sessionData,error:sessionError}=await supa.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!sessionData?.session){
+      // A transient Supabase session read failure must not silently destroy the user state.
+      const cached=getCachedSessionUser();
+      if(cached){
+        currentUser=cached;currentPerms={...currentPerms,...(cached.permissions||{})};
+        isMainAdmin=cached.role==='Main Admin';
+        $('login').classList.add('hidden');$('who').textContent=cached.username||cached.email||'User';applyPermissions();
+        setSyncStatus('Session restored • checking cloud');
+        return;
+      }
+      clearSessionState();return;
+    }
+    const email=sessionData.session.user.email;
+    const {data:u,error:userError}=await supa.from('uw_users').select('*').eq('email',email).maybeSingle();
+    if(userError){
+      // Keep the valid Auth session alive and use the cached permissions temporarily.
+      const cached=getCachedSessionUser();
+      if(cached){
+        currentUser=cached;currentPerms={...currentPerms,...(cached.permissions||{})};
+        isMainAdmin=cached.role==='Main Admin';
+        $('login').classList.add('hidden');$('who').textContent=cached.username||email;applyPermissions();
+        setSyncStatus('Connected • profile read pending');
+        return;
+      }
+      throw userError;
+    }
+    if(!u){
+      alert('Your Supabase login is valid, but your UW Pro user profile was not found in uw_users.');
+      return;
+    }
+    if(u.active===false){alert('This user account is disabled.');await supa.auth.signOut();clearSessionState();location.reload();return}
+    currentUser=u;currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
+    isMainAdmin=u.role==='Main Admin';
+    cacheSessionUser();
+    $('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
+  }catch(e){
+    console.error(e);
+    // Do not sign out a non-admin merely because the profile query failed.
+    const cached=getCachedSessionUser();
+    if(cached){
+      currentUser=cached;currentPerms={...currentPerms,...(cached.permissions||{})};
+      isMainAdmin=cached.role==='Main Admin';
+      $('login').classList.add('hidden');$('who').textContent=cached.username||'User';applyPermissions();
+      setSyncStatus('Offline • using session');
+    }else{
+      alert('Session restore failed: '+(e?.message||e));
+    }
+  }
 }
+
 function userCan(permission){return !!isMainAdmin || !!currentPerms[permission]}
 function applyPermissions(){
   const map=[
@@ -580,7 +679,7 @@ function applyPermissions(){
   const usersNav=$('navUsers');if(usersNav)usersNav.classList.toggle('hidden',!isMainAdmin);
   const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));
   const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
-  const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!userCan('del'));
+  const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!isMainAdmin);
   const claimsNav=$('navClaims');if(claimsNav)claimsNav.classList.toggle('hidden',!userCan('claims'));
   const claimExportBtn=$('claimExportBtn');if(claimExportBtn)claimExportBtn.classList.toggle('hidden',!userCan('claimsExport'));
   const claimNewBtn=$('claimNewBtn');if(claimNewBtn)claimNewBtn.classList.toggle('hidden',!userCan('edit'));
@@ -591,12 +690,21 @@ restoreSession();
 const CLAIMS_KEY='uwpro_claims_v1'; let claims=[],editingClaim=null;
 function normalizeClaim(r){return {...r,request_date:normalizeDate(r.request_date),follow_up_date:normalizeDate(r.follow_up_date)}}
 async function loadClaims(){
-  if(!CLOUD_ENABLED){claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim);renderClaims();updateClaimSummary();return}
+  if(!CLOUD_ENABLED){
+    claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim);
+    renderClaims();updateClaimSummary();return false;
+  }
   const {data:rows,error}=await supa.from('uw_claims').select('*').order('serial_no',{ascending:true});
-  if(error){console.error(error);claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim)}
-  else{claims=(rows||[]).map(normalizeClaim);localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims))}
+  if(error){
+    console.error(error);setSyncStatus('Claims read error');
+    return false;
+  }
+  claims=(rows||[]).map(normalizeClaim);
+  localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
   renderClaims();updateClaimSummary();
+  return true;
 }
+
 function claimStatusBadge(s){return '<span class="claimStatus claim-'+String(s||'').toLowerCase().replace(/\s+/g,'-')+'">'+esc(s||'')+'</span>'}
 function claimPriorityBadge(p){return '<span class="claimStatus claim-'+String(p||'').toLowerCase()+'">'+esc(p||'')+'</span>'}
 function updateClaimSummary(){
@@ -644,13 +752,24 @@ async function deleteClaim(serial){
 function closeClaimEditor(){$('claimEditor').classList.add('hidden');editingClaim=null}
 async function saveClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
+  if(claimSaving)return;
   const r={serial_no:Number($('claimSerial').value),policy_number:$('claimPolicyNo').value.trim(),claim_number:$('claimNo').value.trim(),reference:$('claimReference').value.trim(),agent_name:$('claimAgent').value.trim(),client_name:$('claimClient').value.trim(),request_date:dateOrNull($('claimDate').value),status:$('claimStatus').value,priority:$('claimPriority').value,notes:$('claimNotes').value.trim(),follow_up_date:dateOrNull($('claimFollow').value)};
   if(!r.policy_number||!r.claim_number||!r.client_name||!r.request_date){alert('Please fill Policy Number, Claim Number, Client Name and Request Date.');return}
-  const idx=claims.findIndex(x=>Number(x.serial_no)===Number(r.serial_no));if(idx>=0)claims[idx]=r;else claims.push(r);
-  localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
-  if(CLOUD_ENABLED){const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'});if(error){alert('Claim cloud save failed: '+error.message);return}}
-  closeClaimEditor();renderClaims();updateClaimSummary();
+  claimSaving=true;$('saveClaimBtn').disabled=true;
+  try{
+    if(CLOUD_ENABLED){
+      const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'}).select().single();
+      if(error){alert('Claim cloud save failed: '+error.message);return}
+    }
+    const idx=claims.findIndex(x=>Number(x.serial_no)===Number(r.serial_no));
+    if(idx>=0)claims[idx]=r;else claims.push(r);
+    localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
+    closeClaimEditor();renderClaims();updateClaimSummary();
+  }finally{
+    claimSaving=false;$('saveClaimBtn').disabled=false;
+  }
 }
+
 async function exportClaimsExcel(){
   if(!userCan('claimsExport')){alert('You do not have permission to export claims.');return}
   if(!claims.length){alert('No claims to export.');return}
@@ -697,20 +816,33 @@ function newRequest(){showPage('mainPage',document.querySelector('.navBtn'));edi
 function clearForm(){['agent','client','phone','email','cover','sumInsured','follow','members','expiry','prevPremium','quotePremium','prevInsurer','prevPolicy','policyType','quoteDeadline','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
 function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
 async function save(){
-let r={
-ref:Number($('ref').value),date:$('date').value,agent:$('agent').value,client:$('client').value,
-phone:$('phone').value,email:$('email').value,business:$('business').value,cover:$('cover').value,
-sumInsured:numOrNull($('sumInsured').value),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),
-members:numOrNull($('members').value),expiry:dateOrNull($('expiry').value),prevPremium:numOrNull($('prevPremium').value),quotePremium:numOrNull($('quotePremium').value),
-prevInsurer:$('prevInsurer').value,prevPolicy:$('prevPolicy').value,policyType:$('policyType').value,
-quoteDeadline:dateOrNull($('quoteDeadline').value),remarks:$('remarks').value
-};
-if(!r.client||!r.agent||!r.date){alert('Please fill Date, Agent and Client.');return}
-if(editing){data[data.findIndex(x=>x.ref===editing)]=r}else data.push(r);
-localStorage.setItem(KEY,JSON.stringify(data));
-if(CLOUD_ENABLED){const ok=await cloudUpsert(r);if(!ok)return}
-closeEditor();updateReports();updateFollowups()
+  if(!userCan('edit')){alert('You do not have permission to create/edit requests.');return}
+  if(requestSaving)return;
+  let r={
+    ref:Number($('ref').value),date:$('date').value,agent:$('agent').value.trim(),client:$('client').value.trim(),
+    phone:$('phone').value,email:$('email').value,business:$('business').value,cover:$('cover').value,
+    sumInsured:numOrNull($('sumInsured').value),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),
+    members:numOrNull($('members').value),expiry:dateOrNull($('expiry').value),prevPremium:numOrNull($('prevPremium').value),quotePremium:numOrNull($('quotePremium').value),
+    prevInsurer:$('prevInsurer').value,prevPolicy:$('prevPolicy').value,policyType:$('policyType').value,
+    quoteDeadline:dateOrNull($('quoteDeadline').value),remarks:$('remarks').value
+  };
+  if(!r.client||!r.agent||!r.date){alert('Please fill Date, Agent and Client.');return}
+  requestSaving=true;$('saveRequestBtn').disabled=true;
+  try{
+    // Cloud first. If Supabase rejects the write, browser storage is NOT changed.
+    if(CLOUD_ENABLED){
+      const ok=await cloudUpsert(r);
+      if(!ok)return;
+    }
+    const idx=data.findIndex(x=>Number(x.ref)===Number(r.ref));
+    if(idx>=0)data[idx]=r;else data.push(r);
+    localStorage.setItem(KEY,JSON.stringify(data));
+    closeEditor();render();updateReports();updateFollowups();
+  }finally{
+    requestSaving=false;$('saveRequestBtn').disabled=false;
+  }
 }
+
 
 async function deleteRequest(ref){
   if(!userCan('del')){alert('You do not have permission to delete requests.');return}
@@ -729,15 +861,25 @@ async function deleteRequest(ref){
 function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
 function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 async function clearAllData(){
-  // Clear All Data is STRICTLY Main Admin only. Do not rely only on the button being hidden.
-  if(!isMainAdmin){alert('Main Admin access only.');return}
-  if(confirm('GLOBAL DELETE: Delete all underwriting requests AND claims for EVERY user? This cannot be undone.')){
-    if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
-    data=[];claims=[];
-    localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);
-    render();updateReports();updateFollowups();updateClaimSummary();renderClaims();
+  if(!isMainAdmin){alert('Clear All Data is available only to the Main Admin.');return}
+  if(!data.length && !claims.length){alert('There is no saved data to clear.');return}
+  if(!confirm('GLOBAL DELETE\n\nDelete ALL underwriting requests AND ALL claims for EVERY UW Pro user/device?\n\nThis cannot be undone.'))return;
+  if(CLOUD_ENABLED){
+    const okReq=await cloudDeleteAll();if(!okReq)return;
+    const okClaims=await cloudDeleteClaimAll();if(!okClaims)return;
+    const check=await verifyGlobalDeletion();
+    if(!check.verified){
+      const detail=check.error||('Requests remaining: '+check.requests+' | Claims remaining: '+check.claims);
+      alert('Global deletion could not be verified.\n\n'+detail+'\n\nThis usually means Supabase RLS/policies are blocking DELETE or SELECT.');
+      await cloudLoad(false); await loadClaims(); return;
+    }
   }
+  data=[];claims=[];
+  localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);
+  render();updateReports();updateFollowups();renderClaims();updateClaimSummary();
+  alert('Global data deletion completed and verified. Requests: 0 | Claims: 0');
 }
+
 async function exportExcel(){
   if(!data.length){alert('No requests to export.');return}
   if(!window.ExcelJS){
@@ -850,22 +992,13 @@ render();
 updateReports();
 updateFollowups();
 if(CLOUD_ENABLED){
-  cloudLoad();
-  loadClaims();
-  startSharedRealtime();
-} else setSyncStatus('Local only');
+  cloudLoad(false).then(()=>loadClaims()).then(()=>startRealtimeSync());
+  // Fallback polling keeps all devices consistent even if Supabase Realtime is not enabled.
+  setInterval(()=>{cloudLoad(false);loadClaims();},15000);
+  window.addEventListener('focus',()=>{cloudLoad(false);loadClaims();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){cloudLoad(false);loadClaims();}});
+}else setSyncStatus('Local only');
 setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
-// Shared data is cloud-authoritative. Refresh periodically so deletes made by Admin
-// appear for other users even if Supabase Realtime is not enabled for the tables.
-setInterval(()=>{
-  updateFollowups();
-  sendFollowupNotifications(false);
-  if(CLOUD_ENABLED) refreshSharedData();
-  else loadClaims();
-},15000);
-// Also refresh immediately when a user returns to the tab.
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && CLOUD_ENABLED) refreshSharedData();
-});
+setInterval(()=>{updateFollowups();sendFollowupNotifications(false);},60000);
 </script>
 </body></html>
