@@ -584,7 +584,7 @@ function renderClaims(){
   const q=($('claimSearch')?.value||'').toLowerCase(),sf=$('claimStatusFilter')?.value||'',pf=$('claimPriorityFilter')?.value||'';
   const rows=[...claims].sort((a,b)=>rank(a.priority)-rank(b.priority)||(Number(a.serial_no)||0)-(Number(b.serial_no)||0)).filter(r=>
     (!q||[r.policy_number,r.claim_number,r.reference,r.agent_name,r.client_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf));
-  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button></td></tr>').join(''):'<tr><td colspan="12" style="text-align:center;padding:25px">No claims found.</td></tr>';
+  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button> '+(userCan('del')?'<button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteClaim('+Number(r.serial_no)+')">Delete</button>':'')+'</td></tr>').join(''):'<tr><td colspan="12" style="text-align:center;padding:25px">No claims found.</td></tr>';
 }
 function newClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
@@ -603,6 +603,21 @@ function editClaim(serial){
   $('claimPriority').value=r.priority||'Normal';$('claimFollow').value=r.follow_up_date||'';$('claimNotes').value=r.notes||'';
   $('claimEditor').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
 }
+
+async function deleteClaim(serial){
+  if(!userCan('del')){alert('You do not have permission to delete claims.');return}
+  const r=claims.find(x=>Number(x.serial_no)===Number(serial));if(!r)return;
+  if(!confirm('Delete Claim #'+serial+'?\n\nThis cannot be undone.'))return;
+  if(CLOUD_ENABLED){
+    const {error}=await supa.from('uw_claims').delete().eq('serial_no',serial);
+    if(error){alert('Claim delete failed: '+error.message);return}
+  }
+  claims=claims.filter(x=>Number(x.serial_no)!==Number(serial));
+  localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
+  if(editingClaim===Number(serial))closeClaimEditor();
+  renderClaims();updateClaimSummary();
+}
+
 function closeClaimEditor(){$('claimEditor').classList.add('hidden');editingClaim=null}
 async function saveClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
@@ -646,7 +661,7 @@ function render(){
  let q=$('search').value.toLowerCase(),sf=$('statusFilter').value,pf=$('priorityFilter').value,bf=$('businessFilter').value,mf=$('monthFilter').value;
  let rows=[...data].sort((a,b)=>rank(a.priority)-rank(b.priority)||b.ref-a.ref).filter(r=>
  (!q||[r.ref,r.client,r.agent,r.cover].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf)&&(!bf||r.business===bf)&&(!mf||monthKey(r.date)===mf));
- $('rows').innerHTML=rows.length?rows.map(r=>'<tr><td>#'+r.ref+'</td><td>'+r.date+'</td><td>'+monthLabel(r.date)+'</td><td>'+esc(r.agent)+'</td><td>'+esc(r.client)+'</td><td>'+esc(r.phone||'')+'</td><td>'+r.business+'</td><td>'+esc(r.cover)+'</td><td>'+formatMoney(r.sumInsured)+'</td><td>'+pb(r.priority)+'</td><td>'+badge(r.status)+'</td><td>'+r.follow+'</td><td><button class="secondary" onclick="edit('+r.ref+')">Edit</button></td></tr>').join(''):'<tr><td colspan="13" style="text-align:center;padding:25px">No requests found.</td></tr>';
+ $('rows').innerHTML=rows.length?rows.map(r=>'<tr><td>#'+r.ref+'</td><td>'+r.date+'</td><td>'+monthLabel(r.date)+'</td><td>'+esc(r.agent)+'</td><td>'+esc(r.client)+'</td><td>'+esc(r.phone||'')+'</td><td>'+r.business+'</td><td>'+esc(r.cover)+'</td><td>'+formatMoney(r.sumInsured)+'</td><td>'+pb(r.priority)+'</td><td>'+badge(r.status)+'</td><td>'+r.follow+'</td><td><button class="secondary" onclick="edit('+r.ref+')">Edit</button> '+(userCan('del')?'<button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteRequest('+r.ref+')">Delete</button>':'')+'</td></tr>').join(''):'<tr><td colspan="13" style="text-align:center;padding:25px">No requests found.</td></tr>';
  $('total').textContent=data.length;$('quoted').textContent=data.filter(r=>r.status==='Quoted').length;$('confirmed').textContent=data.filter(r=>r.status==='Confirmed').length;
  $('due').textContent=data.filter(r=>r.follow&&r.follow<=today()&&!['Issued','Declined'].includes(r.status)).length;
  $('overdue').textContent=data.filter(r=>r.quoteDeadline&&r.quoteDeadline<today()&&!['Issued','Declined'].includes(r.status)).length;
@@ -673,6 +688,21 @@ localStorage.setItem(KEY,JSON.stringify(data));
 if(CLOUD_ENABLED){const ok=await cloudUpsert(r);if(!ok)return}
 closeEditor();updateReports();updateFollowups()
 }
+
+async function deleteRequest(ref){
+  if(!userCan('del')){alert('You do not have permission to delete requests.');return}
+  const r=data.find(x=>Number(x.ref)===Number(ref));if(!r)return;
+  if(!confirm('Delete Request #'+ref+'?\n\nThis cannot be undone.'))return;
+  if(CLOUD_ENABLED){
+    const {error}=await supa.from('uw_requests').delete().eq('ref',ref);
+    if(error){alert('Request delete failed: '+error.message);return}
+  }
+  data=data.filter(x=>Number(x.ref)!==Number(ref));
+  localStorage.setItem(KEY,JSON.stringify(data));
+  if(editing===Number(ref))closeEditor();
+  render();updateReports();updateFollowups();
+}
+
 function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
 function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 async function clearAllData(){
