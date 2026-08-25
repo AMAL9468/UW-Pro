@@ -64,11 +64,11 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 
 <aside class="sidebar">
   <div class="sideBrand">UW Pro<span>Underwriting Workflow</span></div>
-  <button class="navBtn active" onclick="showPage('mainPage',this)">Main</button>
-  <button class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
-  <button class="navBtn" onclick="showPage('requestsPage',this)">Requests</button>
-  <button class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
-  <button class="navBtn" onclick="showPage('usersPage',this)">Users</button>
+  <button id="navMain" class="navBtn active" onclick="showPage('mainPage',this)">Main</button>
+  <button id="navReports" class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
+  <button id="navRequests" class="navBtn" onclick="showPage('requestsPage',this)">Requests</button>
+  <button id="navFollowups" class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
+  <button id="navUsers" class="navBtn" onclick="showPage('usersPage',this)">Users</button>
   <button class="navBtn" onclick="showPage('settingsPage',this)">Settings</button>
   <div class="sideBottom"><span class="statusDot"></span> Cloud sync<br><span id="syncStatus">Not configured</span></div>
 </aside>
@@ -98,7 +98,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <select id="priorityFilter" onchange="render()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
 <select id="businessFilter" onchange="render()"><option value="">All Business</option><option>Group Medical</option><option>General Non-Motor</option></select><select id="monthFilter" onchange="render()"><option value="">All Months</option></select>
 <button class="primary" onclick="newRequest()">+ New Request</button>
-<button class="secondary" onclick="exportExcel()">Export Excel</button><button class="secondary" onclick="clearAllData()">Clear All Data</button>
+<button id="exportBtn" class="secondary" onclick="exportExcel()">Export Excel</button><button id="clearAllBtn" class="secondary" onclick="clearAllData()">Clear All Data</button>
 </div>
 
 <div class="card" style="margin-bottom:14px"><b>Priority Work Plan</b>
@@ -151,7 +151,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 </div>
 
 <div id="usersPage" class="page">
-  <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">User Management</h2><div class="muted">Manage UW Pro roles and permissions. This page is visible to the Main Admin. For production login security, connect these users to Supabase Auth before assigning real passwords.</div></div>
+  <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">User Management</h2><div class="muted">Manage UW Pro roles and permissions. This page is visible to the Main Admin. Users are authenticated securely with Supabase Auth. Passwords are never stored in the UW Pro table.</div></div>
   <div class="card" style="margin-bottom:14px">
     <div class="actions" style="margin-top:0"><button class="primary" onclick="openUserForm()">+ Create User</button><button class="secondary" onclick="loadUsers()">Refresh</button></div>
     <div class="tableWrap" style="margin-top:14px"><table style="min-width:850px"><thead><tr><th>User</th><th>Role</th><th>Main</th><th>Reports</th><th>Requests</th><th>Follow-ups</th><th>Status</th><th>Action</th></tr></thead><tbody id="userRows"></tbody></table></div>
@@ -161,8 +161,8 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
     <div class="form">
       <div><label>Username</label><input id="uName" placeholder="e.g. john"></div>
       <div><label>Email</label><input id="uEmail" type="email" placeholder="john@company.com"></div>
-      <div><label>Temporary Password</label><input id="uPass" type="password" placeholder="Minimum 6 characters"></div>
-      <div><label>Role</label><select id="uRole" onchange="applyRoleDefaults()"><option>Underwriter</option><option>Viewer</option><option>Custom</option></select></div>
+      <div><label>Password</label><input id="uPass" type="password" placeholder="Minimum 6 characters"></div>
+      <div><label>Role</label><select id="uRole" onchange="applyRoleDefaults()"><option>Underwriter</option><option>Viewer</option><option>Custom</option><option>Main Admin</option></select></div>
       <div><label>Status</label><select id="uActive"><option value="true">Active</option><option value="false">Disabled</option></select></div>
       <div><label>Permission Summary</label><input id="uPermSummary" readonly></div>
     </div>
@@ -204,7 +204,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <div><label>Policy / Risk Type</label><input id="policyType"></div>
 <div><label>Quotation Deadline</label><input id="quoteDeadline" type="date"></div>
 <div class="full"><label>Remarks</label><textarea id="remarks" rows="3" placeholder="Add underwriting notes, requirements, exclusions or follow-up details..."></textarea></div>
-</div><div class="actions"><button class="primary" onclick="save()">Save / Update</button><button class="secondary" onclick="closeEditor()">Cancel</button></div>
+</div><div class="actions"><button id="saveRequestBtn" class="primary" onclick="save()">Save / Update</button><button class="secondary" onclick="closeEditor()">Cancel</button></div>
 </div>
 </main>
 </div>
@@ -253,7 +253,7 @@ async function cloudDeleteAll(){
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
 
 let editingUser=null;
-const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,export:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,export:false,edit:false,del:false}};
+const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true},'Main Admin':{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,export:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,export:false,edit:false,del:false}};
 function applyRoleDefaults(){const r=$('uRole').value,p=DEFAULT_PERMS[r]||DEFAULT_PERMS.Custom;['Main','Reports','Requests','Follow','Export','Edit','Delete'].forEach((x,i)=>{const el=$('p'+x);if(el)el.checked=!!p[['main','reports','requests','followups','export','edit','del'][i]]});updatePermSummary()}
 function updatePermSummary(){const names=[['pMain','Main'],['pReports','Reports'],['pRequests','Requests'],['pFollow','Follow-ups'],['pExport','Excel'],['pEdit','Edit'],['pDelete','Delete']];$('uPermSummary').value=names.filter(x=>$(x[0])?.checked).map(x=>x[1]).join(', ')||'None'}
 function openUserForm(u=null){editingUser=u?.id||null;$('userForm').classList.remove('hidden');$('uName').value=u?.username||'';$('uEmail').value=u?.email||'';$('uPass').value='';$('uRole').value=u?.role||'Underwriter';$('uActive').value=String(u?.active!==false);const p=u?.permissions||DEFAULT_PERMS[$('uRole').value]||DEFAULT_PERMS.Custom;[['pMain','main'],['pReports','reports'],['pRequests','requests'],['pFollow','followups'],['pExport','export'],['pEdit','edit'],['pDelete','del']].forEach(([id,k])=>$(id).checked=!!p[k]);updatePermSummary();window.scrollTo({top:0,behavior:'smooth'})}
@@ -262,20 +262,64 @@ async function loadUsers(){
  if(!CLOUD_ENABLED){$('userRows').innerHTML='<tr><td colspan="8">Supabase cloud is not configured.</td></tr>';return}
  const {data:rows,error}=await supa.from('uw_users').select('*').order('username');
  if(error){$('userRows').innerHTML='<tr><td colspan="8">Create the uw_users table using the supplied SQL first.</td></tr>';return}
- $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
+ $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td style="white-space:nowrap"><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteUser(\''+u.id+'\')">Delete</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
+}
+async function deleteUser(userId){
+ if(!isMainAdmin){alert('Main Admin access only.');return}
+ if(!userId){alert('Invalid user.');return}
+ const ok=confirm('Delete this user?\n\nThis removes the UW Pro user record and permissions. Their Supabase Auth account may remain until it is removed from Supabase Auth by an administrator.');
+ if(!ok)return;
+ if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
+ try{
+   const {error}=await supa.from('uw_users').delete().eq('id',userId);
+   if(error)throw error;
+   alert('User deleted from UW Pro successfully.');
+   if(editingUser===userId)closeUserForm();
+   await loadUsers();
+ }catch(e){
+   console.error(e);
+   alert('User delete failed: '+(e?.message||e));
+ }
 }
 async function saveUser(){
- const username=$('uName').value.trim(),email=$('uEmail').value.trim(),role=$('uRole').value; if(!username||!email){alert('Username and email are required.');return}
+ const username=$('uName').value.trim(),email=$('uEmail').value.trim(),password=$('uPass').value,role=$('uRole').value;
+ if(!username||!email){alert('Username and email are required.');return}
+ if(!editingUser && password.length<6){alert('For a new user, password must be at least 6 characters.');return}
  const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
- const row={username,email,role,active:$('uActive').value==='true',permissions};
  if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
- if(editingUser) row.id=editingUser;
- const {error}=await supa.from('uw_users').upsert(row,{onConflict:'id'}); if(error){alert('User save failed: '+error.message);return}
- closeUserForm();loadUsers();
+ try{
+   if(editingUser){
+     const row={id:editingUser,username,email,role,active:$('uActive').value==='true',permissions};
+     const {error}=await supa.from('uw_users').upsert(row,{onConflict:'id'});
+     if(error)throw error;
+     // Password changes are intentionally not stored in the database.
+     if(password) alert('User details updated. To change the login password, use Supabase Auth password reset.');
+   }else{
+     // Create a real Supabase Auth account. The password never enters uw_users.
+     const {data:authData,error:authError}=await supa.auth.signUp({email,password});
+     if(authError)throw authError;
+     const row={username,email,role,active:$('uActive').value==='true',permissions};
+     const {error:rowError}=await supa.from('uw_users').insert(row);
+     if(rowError)throw rowError;
+     // Do not leave the browser logged in as the newly-created user.
+     try{await supa.auth.signOut()}catch(e){}
+     alert(authData?.session
+       ? 'User created successfully. They can now log in with the email/username and password.'
+       : 'User created. If Supabase email confirmation is enabled, they must confirm the email before first login.');
+   }
+   closeUserForm();await loadUsers();
+ }catch(e){
+   console.error(e);
+   alert('User save failed: '+(e?.message||e));
+ }
 }
+
 function userCan(permission){return true}
 
 function showPage(id,btn){
+  const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',followupsPage:'followups'};
+  if(id==='usersPage'&&!isMainAdmin){alert('Main Admin access only.');return}
+  if(required[id]&&!userCan(required[id])){alert('You do not have permission to open this section.');return}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   const p=$(id);if(p)p.classList.add('active');
   document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
@@ -378,9 +422,82 @@ function sendFollowupNotifications(force){
   }
 }
 
-function login(){if($('user').value==='admin'&&$('pass').value==='UWPro@2026'){sessionStorage.uw=1;$('login').classList.add('hidden');$('who').textContent='Admin'}else alert('Invalid username or password');}
-function logout(){sessionStorage.removeItem('uw');location.reload()}
-if(sessionStorage.uw){$('login').classList.add('hidden');$('who').textContent='Admin'}
+let currentUser=null;
+let currentPerms={main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true};
+let isMainAdmin=false;
+
+async function login(){
+  const identifier=$('user').value.trim(), password=$('pass').value;
+  if(!identifier||!password){alert('Enter username/email and password.');return}
+  // Keep the existing emergency Main Admin login working until a Supabase Auth admin is created.
+  if(identifier==='admin'&&password==='UWPro@2026'){
+    isMainAdmin=true; currentUser={username:'Admin',email:''};
+    currentPerms={main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true};
+    sessionStorage.uw=1; sessionStorage.userEmail=''; sessionStorage.isAdmin='1';
+    $('login').classList.add('hidden'); $('who').textContent='Admin';
+    applyPermissions(); return;
+  }
+  if(!CLOUD_ENABLED){alert('Cloud login is not configured.');return}
+  try{
+    // Find the UW Pro username first, then authenticate against Supabase Auth using its email.
+    const lookup=identifier.includes('@')
+      ? await supa.from('uw_users').select('*').eq('email',identifier).maybeSingle()
+      : await supa.from('uw_users').select('*').eq('username',identifier).maybeSingle();
+    if(lookup.error) throw lookup.error;
+    if(!lookup.data){alert('Username or password wrong.');return}
+    if(lookup.data.active===false){alert('This user account is disabled.');return}
+    const {data:authData,error:authError}=await supa.auth.signInWithPassword({
+      email:lookup.data.email,password
+    });
+    if(authError) throw authError;
+    if(!authData.user){alert('Login failed.');return}
+    currentUser=lookup.data;
+    currentPerms={main:false,reports:false,requests:false,followups:false,export:false,edit:false,del:false,...(lookup.data.permissions||{})};
+    isMainAdmin=lookup.data.role==='Main Admin';
+    sessionStorage.uw=1; sessionStorage.userEmail=lookup.data.email; sessionStorage.isAdmin=isMainAdmin?'1':'0';
+    $('login').classList.add('hidden'); $('who').textContent=lookup.data.username;
+    applyPermissions();
+    showPage('mainPage',document.querySelector('.navBtn'));
+  }catch(e){
+    console.error(e);
+    const msg=String(e?.message||'').toLowerCase().includes('email not confirmed')
+      ? 'Email is not confirmed yet. Confirm the user email in Supabase Auth, then try again.'
+      : 'Username or password wrong.';
+    alert(msg);
+  }
+}
+async function logout(){
+  try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
+  sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');location.reload();
+}
+async function restoreSession(){
+  if(sessionStorage.uw!=='1')return;
+  if(sessionStorage.isAdmin==='1'){
+    isMainAdmin=true; currentUser={username:'Admin',email:''};
+    currentPerms={main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true};
+    $('login').classList.add('hidden');$('who').textContent='Admin';applyPermissions();return;
+  }
+  if(!CLOUD_ENABLED){sessionStorage.clear();return}
+  const {data:sessionData}=await supa.auth.getSession();
+  if(!sessionData?.session){sessionStorage.clear();return}
+  const email=sessionData.session.user.email;
+  const {data:u}=await supa.from('uw_users').select('*').eq('email',email).maybeSingle();
+  if(!u||u.active===false){await supa.auth.signOut();sessionStorage.clear();return}
+  currentUser=u;currentPerms={main:false,reports:false,requests:false,followups:false,export:false,edit:false,del:false,...(u.permissions||{})};
+  isMainAdmin=u.role==='Main Admin';$('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
+}
+function userCan(permission){return !!isMainAdmin || !!currentPerms[permission]}
+function applyPermissions(){
+  const map=[
+    ['navMain','main'],['navReports','reports'],['navRequests','requests'],['navFollowups','followups']
+  ];
+  map.forEach(([id,p])=>{const el=$(id);if(el)el.classList.toggle('hidden',!userCan(p))});
+  const usersNav=$('navUsers');if(usersNav)usersNav.classList.toggle('hidden',!isMainAdmin);
+  const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));
+  const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
+  const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!userCan('del'));
+}
+restoreSession();
 function badge(s){return '<span class="badge '+s.toLowerCase()+'">'+s+'</span>'}
 function pb(p){return '<span class="badge '+p.toLowerCase()+'">'+p+'</span>'}
 function rank(p){return ({Urgent:0,High:1,Normal:2,Low:3}[p]??4)}
