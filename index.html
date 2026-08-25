@@ -287,10 +287,33 @@ async function cloudUpsert(r){
   setSyncStatus('Connected');return true;
 }
 async function cloudDeleteAll(){
-  if(!CLOUD_ENABLED)return;
+  if(!CLOUD_ENABLED)return true;
+  // GLOBAL delete: remove shared underwriting requests from Supabase.
   const {error}=await supa.from('uw_requests').delete().not('ref','is',null);
-  if(error){alert('Cloud delete failed: '+error.message);return false}
+  if(error){alert('Cloud request delete failed: '+error.message);return false}
+  // GLOBAL delete: remove shared claims as well.
+  const {error:claimError}=await supa.from('uw_claims').delete().not('serial_no','is',null);
+  if(claimError){alert('Cloud claim delete failed: '+claimError.message);return false}
   return true;
+}
+
+let sharedRealtimeChannel=null;
+function startSharedRealtime(){
+  if(!CLOUD_ENABLED||sharedRealtimeChannel)return;
+  sharedRealtimeChannel=supa.channel('uwpro-shared-data-sync')
+    .on('postgres_changes',{event:'*',schema:'public',table:'uw_requests'},async()=>{
+      await cloudLoad();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'uw_claims'},async()=>{
+      await loadClaims();
+    })
+    .subscribe();
+}
+
+async function refreshSharedData(){
+  if(!CLOUD_ENABLED)return;
+  await cloudLoad();
+  if(document.getElementById('claimsPage')?.classList.contains('active')) await loadClaims();
 }
 
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
@@ -706,11 +729,15 @@ async function deleteRequest(ref){
 function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
 function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 async function clearAllData(){
-if(!data.length){alert('There is no saved data to clear.');return}
-if(confirm('Delete all saved underwriting requests? This cannot be undone.')){
-  if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
-  data=[];localStorage.removeItem(KEY);render();updateReports();updateFollowups()
-}}
+  // Clear All Data is STRICTLY Main Admin only. Do not rely only on the button being hidden.
+  if(!isMainAdmin){alert('Main Admin access only.');return}
+  if(confirm('GLOBAL DELETE: Delete all underwriting requests AND claims for EVERY user? This cannot be undone.')){
+    if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
+    data=[];claims=[];
+    localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);
+    render();updateReports();updateFollowups();updateClaimSummary();renderClaims();
+  }
+}
 async function exportExcel(){
   if(!data.length){alert('No requests to export.');return}
   if(!window.ExcelJS){
@@ -822,8 +849,23 @@ async function exportExcel(){
 render();
 updateReports();
 updateFollowups();
-if(CLOUD_ENABLED) cloudLoad(); else setSyncStatus('Local only');
+if(CLOUD_ENABLED){
+  cloudLoad();
+  loadClaims();
+  startSharedRealtime();
+} else setSyncStatus('Local only');
 setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
-setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();},60000);
+// Shared data is cloud-authoritative. Refresh periodically so deletes made by Admin
+// appear for other users even if Supabase Realtime is not enabled for the tables.
+setInterval(()=>{
+  updateFollowups();
+  sendFollowupNotifications(false);
+  if(CLOUD_ENABLED) refreshSharedData();
+  else loadClaims();
+},15000);
+// Also refresh immediately when a user returns to the tab.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && CLOUD_ENABLED) refreshSharedData();
+});
 </script>
 </body></html>
