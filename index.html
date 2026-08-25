@@ -46,6 +46,15 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 .followupSection{margin-bottom:18px}.followupSection h3{margin:0 0 10px;font-size:14px}.followupItem{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:8px;background:#fff}.followupItem.overdue{border-left:5px solid #dc2626}.followupItem.today{border-left:5px solid #d97706}.followupItem.upcoming{border-left:5px solid #2563eb}.followupMeta{font-size:12px;color:#64748b;margin-top:4px}.followupAction{white-space:nowrap}.reminderBadge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}.reminderBadge.overdue{background:#fee2e2;color:#b91c1c}.reminderBadge.today{background:#fef3c7;color:#92400e}.reminderBadge.upcoming{background:#dbeafe;color:#1d4ed8}
 @media(max-width:800px){.sidebar{width:72px;padding:14px 8px}.sideBrand{font-size:0;text-align:center}.sideBrand:before{content:'UW';font-size:18px}.sideBrand span{display:none}.navBtn{font-size:0;text-align:center;padding:13px 5px}.navBtn:before{content:'•';font-size:20px}.sideBottom{display:none}.mainShell{margin-left:72px}.reportGrid{grid-template-columns:1fr}.quickGrid{grid-template-columns:1fr}}
 
+
+.claimStatus{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.claim-requested{background:#fef3c7;color:#92400e}.claim-registered{background:#dbeafe;color:#1d4ed8}
+.claim-addition-info{background:#ffedd5;color:#c2410c}.claim-payment-under-process{background:#dcfce7;color:#15803d}
+.claim-urgent{background:#fee2e2;color:#b91c1c}.claim-high{background:#ffedd5;color:#c2410c}
+.claim-normal{background:#e5e7eb;color:#475569}.claim-low{background:#f1f5f9;color:#64748b}
+.claimSummaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.claimSummaryGrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.claimSummaryGrid{grid-template-columns:1fr}}
 .permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -59,6 +68,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <label class="loginLabel">Password</label>
 <input id="pass" type="password" placeholder="Enter password" autocomplete="current-password">
 <button onclick="login()">Sign in</button>
+<p style="text-align:center;margin:12px 0 0"><button class="secondary" style="width:auto;background:transparent" onclick="forgotPassword()">Forgot password?</button></p>
 <p class="loginHint">Authorized users only</p>
 </div></div>
 
@@ -68,6 +78,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   <button id="navReports" class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
   <button id="navRequests" class="navBtn" onclick="showPage('requestsPage',this)">Requests</button>
   <button id="navFollowups" class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
+  <button id="navClaims" class="navBtn" onclick="showPage('claimsPage',this)">Claims</button>
   <button id="navUsers" class="navBtn" onclick="showPage('usersPage',this)">Users</button>
   <button class="navBtn" onclick="showPage('settingsPage',this)">Settings</button>
   <div class="sideBottom"><span class="statusDot"></span> Cloud sync<br><span id="syncStatus">Not configured</span></div>
@@ -150,6 +161,38 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   <div class="card"><div id="followupList" class="muted">No follow-ups scheduled.</div></div>
 </div>
 
+
+<div id="claimsPage" class="page">
+  <div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div><h2 class="sectionTitle" style="margin-bottom:4px">General Claims</h2><div class="muted">Manage general claims, status, priority and follow-ups.</div></div>
+    <div class="actions" style="margin-top:0"><button id="claimExportBtn" class="secondary" onclick="exportClaimsExcel()">Export Claims Excel</button><button id="claimNewBtn" class="primary" onclick="newClaim()">+ New Claim</button></div>
+  </div></div>
+  <div class="claimSummaryGrid" style="margin-bottom:14px">
+    <div class="card"><div class="muted">Total Claims</div><div class="num" id="claimTotal">0</div></div>
+    <div class="card"><div class="muted">Requested</div><div class="num" id="claimRequested">0</div></div>
+    <div class="card"><div class="muted">Addition Info</div><div class="num" id="claimAdditionInfo">0</div></div>
+    <div class="card"><div class="muted">Payment Under Process</div><div class="num" id="claimPayment">0</div></div>
+  </div>
+  <div class="toolbar">
+    <input id="claimSearch" placeholder="Search policy, claim, client, agent..." oninput="renderClaims()">
+    <select id="claimStatusFilter" onchange="renderClaims()"><option value="">All Status</option><option>Requested</option><option>Registered</option><option>Addition Info</option><option>Payment Under Process</option></select>
+    <select id="claimPriorityFilter" onchange="renderClaims()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
+  </div>
+  <div class="tableWrap"><table style="min-width:1350px"><thead><tr>
+    <th>S.No.</th><th>Policy No.</th><th>Claim No.</th><th>Reference</th><th>Agent Name</th><th>Client Name</th><th>Request Date</th><th>Status</th><th>Priority</th><th>Notes</th><th>Follow-up Date</th><th>Action</th>
+  </tr></thead><tbody id="claimRows"></tbody></table></div>
+  <div id="claimEditor" class="card hidden" style="margin-top:14px"><h2 id="claimEditorTitle" class="sectionTitle">New Claim</h2>
+    <div class="form">
+      <div><label>Serial No.</label><input id="claimSerial" readonly></div><div><label>Policy Number</label><input id="claimPolicyNo"></div><div><label>Claim Number</label><input id="claimNo"></div>
+      <div><label>Reference</label><input id="claimReference"></div><div><label>Agent Name</label><input id="claimAgent"></div><div><label>Client Name</label><input id="claimClient"></div>
+      <div><label>Request Date</label><input id="claimDate" type="date"></div><div><label>Status</label><select id="claimStatus"><option>Requested</option><option>Registered</option><option>Addition Info</option><option>Payment Under Process</option></select></div>
+      <div><label>Priority</label><select id="claimPriority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
+      <div><label>Follow-up Date</label><input id="claimFollow" type="date"></div><div class="full"><label>Notes</label><textarea id="claimNotes" rows="4" placeholder="Add claim notes, requirements or follow-up details..."></textarea></div>
+    </div>
+    <div class="actions"><button id="saveClaimBtn" class="primary" onclick="saveClaim()">Save / Update Claim</button><button class="secondary" onclick="closeClaimEditor()">Cancel</button></div>
+  </div>
+</div>
+
 <div id="usersPage" class="page">
   <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">User Management</h2><div class="muted">Manage UW Pro roles and permissions. This page is visible to the Main Admin. Users are authenticated securely with Supabase Auth. Passwords are never stored in the UW Pro table.</div></div>
   <div class="card" style="margin-bottom:14px">
@@ -167,7 +210,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
       <div><label>Permission Summary</label><input id="uPermSummary" readonly></div>
     </div>
     <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
-      <label><input type="checkbox" id="pMain"> Main</label><label><input type="checkbox" id="pReports"> Reports</label><label><input type="checkbox" id="pRequests"> Requests</label><label><input type="checkbox" id="pFollow"> Follow-ups</label><label><input type="checkbox" id="pExport"> Excel Export</label><label><input type="checkbox" id="pEdit"> Create/Edit</label><label><input type="checkbox" id="pDelete"> Delete</label>
+      <label><input type="checkbox" id="pMain"> Main</label><label><input type="checkbox" id="pReports"> Reports</label><label><input type="checkbox" id="pRequests"> Requests</label><label><input type="checkbox" id="pFollow"> Follow-ups</label><label><input type="checkbox" id="pExport"> Excel Export</label><label><input type="checkbox" id="pEdit"> Create/Edit</label><label><input type="checkbox" id="pDelete"> Delete</label><label><input type="checkbox" id="pClaims"> Claims</label><label><input type="checkbox" id="pClaimsExport"> Claims Excel</label>
     </div>
     <div class="actions"><button class="primary" onclick="saveUser()">Save User</button><button class="secondary" onclick="closeUserForm()">Cancel</button></div>
   </div>
@@ -253,16 +296,16 @@ async function cloudDeleteAll(){
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
 
 let editingUser=null;
-const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true},'Main Admin':{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,export:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,export:false,edit:false,del:false}};
-function applyRoleDefaults(){const r=$('uRole').value,p=DEFAULT_PERMS[r]||DEFAULT_PERMS.Custom;['Main','Reports','Requests','Follow','Export','Edit','Delete'].forEach((x,i)=>{const el=$('p'+x);if(el)el.checked=!!p[['main','reports','requests','followups','export','edit','del'][i]]});updatePermSummary()}
-function updatePermSummary(){const names=[['pMain','Main'],['pReports','Reports'],['pRequests','Requests'],['pFollow','Follow-ups'],['pExport','Excel'],['pEdit','Edit'],['pDelete','Delete']];$('uPermSummary').value=names.filter(x=>$(x[0])?.checked).map(x=>x[1]).join(', ')||'None'}
+const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true},'Main Admin':{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,claims:true,export:false,claimsExport:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false}};
+function applyRoleDefaults(){const r=$('uRole').value,p=DEFAULT_PERMS[r]||DEFAULT_PERMS.Custom;['Main','Reports','Requests','Follow','Claims','ClaimsExport','Export','Edit','Delete'].forEach((x,i)=>{const el=$('p'+x);if(el)el.checked=!!p[['main','reports','requests','followups','claims','claimsExport','export','edit','del'][i]]});updatePermSummary()}
+function updatePermSummary(){const names=[['pMain','Main'],['pReports','Reports'],['pRequests','Requests'],['pFollow','Follow-ups'],['pClaims','Claims'],['pClaimsExport','Claims Excel'],['pExport','Excel'],['pEdit','Edit'],['pDelete','Delete']];$('uPermSummary').value=names.filter(x=>$(x[0])?.checked).map(x=>x[1]).join(', ')||'None'}
 function openUserForm(u=null){editingUser=u?.id||null;$('userForm').classList.remove('hidden');$('uName').value=u?.username||'';$('uEmail').value=u?.email||'';$('uPass').value='';$('uRole').value=u?.role||'Underwriter';$('uActive').value=String(u?.active!==false);const p=u?.permissions||DEFAULT_PERMS[$('uRole').value]||DEFAULT_PERMS.Custom;[['pMain','main'],['pReports','reports'],['pRequests','requests'],['pFollow','followups'],['pExport','export'],['pEdit','edit'],['pDelete','del']].forEach(([id,k])=>$(id).checked=!!p[k]);updatePermSummary();window.scrollTo({top:0,behavior:'smooth'})}
 function closeUserForm(){$('userForm').classList.add('hidden');editingUser=null}
 async function loadUsers(){
  if(!CLOUD_ENABLED){$('userRows').innerHTML='<tr><td colspan="8">Supabase cloud is not configured.</td></tr>';return}
  const {data:rows,error}=await supa.from('uw_users').select('*').order('username');
  if(error){$('userRows').innerHTML='<tr><td colspan="8">Create the uw_users table using the supplied SQL first.</td></tr>';return}
- $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td style="white-space:nowrap"><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteUser(\''+u.id+'\')">Delete</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
+ $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.claims&&'Claims',p.claimsExport&&'Claims Excel',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td style="white-space:nowrap"><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteUser(\''+u.id+'\')">Delete</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
 }
 async function deleteUser(userId){
  if(!isMainAdmin){alert('Main Admin access only.');return}
@@ -285,7 +328,7 @@ async function saveUser(){
  const username=$('uName').value.trim(),email=$('uEmail').value.trim(),password=$('uPass').value,role=$('uRole').value;
  if(!username||!email){alert('Username and email are required.');return}
  if(!editingUser && password.length<6){alert('For a new user, password must be at least 6 characters.');return}
- const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
+ const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,claims:$('pClaims').checked,claimsExport:$('pClaimsExport').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
  if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
  try{
    if(editingUser){
@@ -317,7 +360,7 @@ async function saveUser(){
 function userCan(permission){return true}
 
 function showPage(id,btn){
-  const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',followupsPage:'followups'};
+  const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',followupsPage:'followups',claimsPage:'claims'};
   if(id==='usersPage'&&!isMainAdmin){alert('Main Admin access only.');return}
   if(required[id]&&!userCan(required[id])){alert('You do not have permission to open this section.');return}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
@@ -326,6 +369,7 @@ function showPage(id,btn){
   if(btn)btn.classList.add('active');
   if(id==='reportsPage')updateReports();
   if(id==='followupsPage')updateFollowups();
+  if(id==='claimsPage')loadClaims();
   if(id==='usersPage')loadUsers();
 }
 function updateReports(){
@@ -423,7 +467,7 @@ function sendFollowupNotifications(force){
 }
 
 let currentUser=null;
-let currentPerms={main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true};
+let currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true};
 let isMainAdmin=false;
 
 async function login(){
@@ -432,7 +476,7 @@ async function login(){
   // Keep the existing emergency Main Admin login working until a Supabase Auth admin is created.
   if(identifier==='admin'&&password==='UWPro@2026'){
     isMainAdmin=true; currentUser={username:'Admin',email:''};
-    currentPerms={main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true};
+    currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true};
     sessionStorage.uw=1; sessionStorage.userEmail=''; sessionStorage.isAdmin='1';
     $('login').classList.add('hidden'); $('who').textContent='Admin';
     applyPermissions(); return;
@@ -452,7 +496,7 @@ async function login(){
     if(authError) throw authError;
     if(!authData.user){alert('Login failed.');return}
     currentUser=lookup.data;
-    currentPerms={main:false,reports:false,requests:false,followups:false,export:false,edit:false,del:false,...(lookup.data.permissions||{})};
+    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(lookup.data.permissions||{})};
     isMainAdmin=lookup.data.role==='Main Admin';
     sessionStorage.uw=1; sessionStorage.userEmail=lookup.data.email; sessionStorage.isAdmin=isMainAdmin?'1':'0';
     $('login').classList.add('hidden'); $('who').textContent=lookup.data.username;
@@ -466,6 +510,24 @@ async function login(){
     alert(msg);
   }
 }
+
+async function forgotPassword(){
+  if(!CLOUD_ENABLED){alert('Password reset requires Supabase cloud login.');return}
+  let identifier=$('user').value.trim();if(!identifier){alert('Enter your username or email first.');return}
+  try{
+    let email=identifier;
+    if(!identifier.includes('@')){const {data,error}=await supa.from('uw_users').select('email').eq('username',identifier).maybeSingle();if(error)throw error;if(!data?.email){alert('Username not found.');return}email=data.email}
+    const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});if(error)throw error;
+    alert('Password reset link sent to the registered email address.');
+  }catch(e){alert('Could not send password reset: '+(e?.message||e))}
+}
+async function updatePasswordAfterRecovery(){
+  const p=prompt('Enter your new password (minimum 6 characters):');if(p===null)return;if(p.length<6){alert('Password must be at least 6 characters.');return}
+  const {error}=await supa.auth.updateUser({password:p});if(error){alert('Password update failed: '+error.message);return}
+  alert('Password updated successfully.');try{await supa.auth.signOut()}catch(e){}
+}
+if(CLOUD_ENABLED)supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(updatePasswordAfterRecovery,300)});
+
 async function logout(){
   try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
   sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');location.reload();
@@ -474,7 +536,7 @@ async function restoreSession(){
   if(sessionStorage.uw!=='1')return;
   if(sessionStorage.isAdmin==='1'){
     isMainAdmin=true; currentUser={username:'Admin',email:''};
-    currentPerms={main:true,reports:true,requests:true,followups:true,export:true,edit:true,del:true};
+    currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true};
     $('login').classList.add('hidden');$('who').textContent='Admin';applyPermissions();return;
   }
   if(!CLOUD_ENABLED){sessionStorage.clear();return}
@@ -483,7 +545,7 @@ async function restoreSession(){
   const email=sessionData.session.user.email;
   const {data:u}=await supa.from('uw_users').select('*').eq('email',email).maybeSingle();
   if(!u||u.active===false){await supa.auth.signOut();sessionStorage.clear();return}
-  currentUser=u;currentPerms={main:false,reports:false,requests:false,followups:false,export:false,edit:false,del:false,...(u.permissions||{})};
+  currentUser=u;currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
   isMainAdmin=u.role==='Main Admin';$('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
 }
 function userCan(permission){return !!isMainAdmin || !!currentPerms[permission]}
@@ -496,8 +558,82 @@ function applyPermissions(){
   const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));
   const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
   const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!userCan('del'));
+  const claimsNav=$('navClaims');if(claimsNav)claimsNav.classList.toggle('hidden',!userCan('claims'));
+  const claimExportBtn=$('claimExportBtn');if(claimExportBtn)claimExportBtn.classList.toggle('hidden',!userCan('claimsExport'));
+  const claimNewBtn=$('claimNewBtn');if(claimNewBtn)claimNewBtn.classList.toggle('hidden',!userCan('edit'));
+  const claimSaveBtn=$('saveClaimBtn');if(claimSaveBtn)claimSaveBtn.classList.toggle('hidden',!userCan('edit'));
 }
 restoreSession();
+
+const CLAIMS_KEY='uwpro_claims_v1'; let claims=[],editingClaim=null;
+function normalizeClaim(r){return {...r,request_date:normalizeDate(r.request_date),follow_up_date:normalizeDate(r.follow_up_date)}}
+async function loadClaims(){
+  if(!CLOUD_ENABLED){claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim);renderClaims();updateClaimSummary();return}
+  const {data:rows,error}=await supa.from('uw_claims').select('*').order('serial_no',{ascending:true});
+  if(error){console.error(error);claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim)}
+  else{claims=(rows||[]).map(normalizeClaim);localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims))}
+  renderClaims();updateClaimSummary();
+}
+function claimStatusBadge(s){return '<span class="claimStatus claim-'+String(s||'').toLowerCase().replace(/\s+/g,'-')+'">'+esc(s||'')+'</span>'}
+function claimPriorityBadge(p){return '<span class="claimStatus claim-'+String(p||'').toLowerCase()+'">'+esc(p||'')+'</span>'}
+function updateClaimSummary(){
+  $('claimTotal').textContent=claims.length;$('claimRequested').textContent=claims.filter(r=>r.status==='Requested').length;
+  $('claimAdditionInfo').textContent=claims.filter(r=>r.status==='Addition Info').length;$('claimPayment').textContent=claims.filter(r=>r.status==='Payment Under Process').length;
+}
+function renderClaims(){
+  const q=($('claimSearch')?.value||'').toLowerCase(),sf=$('claimStatusFilter')?.value||'',pf=$('claimPriorityFilter')?.value||'';
+  const rows=[...claims].sort((a,b)=>rank(a.priority)-rank(b.priority)||(Number(a.serial_no)||0)-(Number(b.serial_no)||0)).filter(r=>
+    (!q||[r.policy_number,r.claim_number,r.reference,r.agent_name,r.client_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf));
+  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button></td></tr>').join(''):'<tr><td colspan="12" style="text-align:center;padding:25px">No claims found.</td></tr>';
+}
+function newClaim(){
+  if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
+  showPage('claimsPage',$('navClaims'));editingClaim=null;$('claimEditorTitle').textContent='New Claim';
+  $('claimSerial').value=claims.reduce((m,r)=>Math.max(m,Number(r.serial_no)||0),0)+1;
+  ['claimPolicyNo','claimNo','claimReference','claimAgent','claimClient','claimFollow','claimNotes'].forEach(id=>$(id).value='');
+  $('claimDate').value=today();$('claimStatus').value='Requested';$('claimPriority').value='Normal';$('claimEditor').classList.remove('hidden');
+  window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+function editClaim(serial){
+  const r=claims.find(x=>Number(x.serial_no)===Number(serial));if(!r)return;
+  if(!userCan('edit')){alert('You do not have permission to edit claims.');return}
+  editingClaim=serial;$('claimEditorTitle').textContent='Edit Claim #'+serial;
+  $('claimSerial').value=r.serial_no||'';$('claimPolicyNo').value=r.policy_number||'';$('claimNo').value=r.claim_number||'';$('claimReference').value=r.reference||'';
+  $('claimAgent').value=r.agent_name||'';$('claimClient').value=r.client_name||'';$('claimDate').value=r.request_date||'';$('claimStatus').value=r.status||'Requested';
+  $('claimPriority').value=r.priority||'Normal';$('claimFollow').value=r.follow_up_date||'';$('claimNotes').value=r.notes||'';
+  $('claimEditor').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+function closeClaimEditor(){$('claimEditor').classList.add('hidden');editingClaim=null}
+async function saveClaim(){
+  if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
+  const r={serial_no:Number($('claimSerial').value),policy_number:$('claimPolicyNo').value.trim(),claim_number:$('claimNo').value.trim(),reference:$('claimReference').value.trim(),agent_name:$('claimAgent').value.trim(),client_name:$('claimClient').value.trim(),request_date:dateOrNull($('claimDate').value),status:$('claimStatus').value,priority:$('claimPriority').value,notes:$('claimNotes').value.trim(),follow_up_date:dateOrNull($('claimFollow').value)};
+  if(!r.policy_number||!r.claim_number||!r.client_name||!r.request_date){alert('Please fill Policy Number, Claim Number, Client Name and Request Date.');return}
+  const idx=claims.findIndex(x=>Number(x.serial_no)===Number(r.serial_no));if(idx>=0)claims[idx]=r;else claims.push(r);
+  localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
+  if(CLOUD_ENABLED){const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'});if(error){alert('Claim cloud save failed: '+error.message);return}}
+  closeClaimEditor();renderClaims();updateClaimSummary();
+}
+async function exportClaimsExcel(){
+  if(!userCan('claimsExport')){alert('You do not have permission to export claims.');return}
+  if(!claims.length){alert('No claims to export.');return}
+  if(!window.ExcelJS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)}).catch(()=>{})}
+  if(!window.ExcelJS){alert('Excel export library could not load.');return}
+  const wb=new ExcelJS.Workbook();wb.creator='UW Pro';const ws=wb.addWorksheet('Claims',{views:[{state:'frozen',ySplit:1}]});
+  const h=['S.No.','Policy Number','Claim Number','Reference','Agent Name','Client Name','Request Date','Status','Priority','Notes','Follow-up Date'];ws.addRow(h);
+  claims.forEach((r,i)=>ws.addRow([i+1,r.policy_number,r.claim_number,r.reference,r.agent_name,r.client_name,r.request_date||'',r.status,r.priority,r.notes||'',r.follow_up_date||'']));
+  const border={top:{style:'thin',color:{argb:'B7C3D0'}},bottom:{style:'thin',color:{argb:'B7C3D0'}},left:{style:'thin',color:{argb:'B7C3D0'}},right:{style:'thin',color:{argb:'B7C3D0'}}};
+  ws.getRow(1).height=28;ws.getRow(1).eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'1F4E78'}};c.font={bold:true,color:{argb:'FFFFFF'}};c.alignment={horizontal:'center',vertical:'middle'};c.border=border});
+  [8,18,18,16,20,26,14,24,12,38,15].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  for(let i=2;i<=ws.rowCount;i++){const row=ws.getRow(i);row.eachCell((c,col)=>{c.border=border;c.alignment={vertical:'middle',wrapText:col===10}});
+    [7,11].forEach(c=>{if(row.getCell(c).value)row.getCell(c).numFmt='dd-mmm-yyyy'});
+    const sc={'Requested':'FFF2CC','Registered':'D9EAF7','Addition Info':'FCE4D6','Payment Under Process':'E2F0D9'},pc={'Urgent':'F4CCCC','High':'FCE4D6','Normal':'E7E6E6','Low':'F2F2F2'};
+    if(sc[row.getCell(8).value]){const c=row.getCell(8);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:sc[row.getCell(8).value]}};c.font={bold:true}}
+    if(pc[row.getCell(9).value]){const c=row.getCell(9);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:pc[row.getCell(9).value]}};c.font={bold:true}}
+  }
+  ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:h.length}};ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:'A4'};
+  const b=await wb.xlsx.writeBuffer(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='UW_Pro_General_Claims.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
 function badge(s){return '<span class="badge '+s.toLowerCase()+'">'+s+'</span>'}
 function pb(p){return '<span class="badge '+p.toLowerCase()+'">'+p+'</span>'}
 function rank(p){return ({Urgent:0,High:1,Normal:2,Low:3}[p]??4)}
@@ -652,12 +788,12 @@ async function exportExcel(){
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
-['pMain','pReports','pRequests','pFollow','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
+['pMain','pReports','pRequests','pFollow','pClaims','pClaimsExport','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
 render();
 updateReports();
 updateFollowups();
 if(CLOUD_ENABLED) cloudLoad(); else setSyncStatus('Local only');
 setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
-setInterval(()=>{updateFollowups();sendFollowupNotifications(false);},60000);
+setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();},60000);
 </script>
 </body></html>
