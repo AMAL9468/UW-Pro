@@ -56,7 +56,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 @media(max-width:900px){.claimSummaryGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.claimSummaryGrid{grid-template-columns:1fr}}
 .permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
-</style>
+input[placeholder="DD-MM-YYYY"]{font-variant-numeric:tabular-nums}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -181,9 +181,9 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
     <div class="form">
       <div><label>Serial No.</label><input id="claimSerial" readonly></div><div><label>Policy Number</label><input id="claimPolicyNo"></div><div><label>Claim Number</label><input id="claimNo"></div>
       <div><label>Reference</label><input id="claimReference"></div><div><label>Tracking Reference</label><input id="claimTrackingReference" placeholder="Enter tracking reference"></div><div><label>Type of Claim</label><input id="claimType" placeholder="e.g. Motor, Medical, Travel"></div><div><label>Agent Name</label><input id="claimAgent"></div><div><label>Client Name</label><input id="claimClient"></div>
-      <div><label>Request Date</label><input id="claimDate" type="date"></div><div><label>Status</label><select id="claimStatus"><option>Requested</option><option>Registered</option><option>Addition Info</option><option>Payment Under Process</option></select></div>
+      <div><label>Request Date</label><input id="claimDate" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"></div><div><label>Status</label><select id="claimStatus"><option>Requested</option><option>Registered</option><option>Addition Info</option><option>Payment Under Process</option></select></div>
       <div><label>Priority</label><select id="claimPriority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
-      <div><label>Follow-up Date</label><input id="claimFollow" type="date"></div><div class="full"><label>Notes</label><textarea id="claimNotes" rows="4" placeholder="Add claim notes, requirements or follow-up details..."></textarea></div>
+      <div><label>Follow-up Date</label><input id="claimFollow" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"></div><div class="full"><label>Notes</label><textarea id="claimNotes" rows="4" placeholder="Add claim notes, requirements or follow-up details..."></textarea></div>
     </div>
     <div class="actions"><button id="saveClaimBtn" class="primary" onclick="saveClaim()">Save / Update Claim</button><button class="secondary" onclick="closeClaimEditor()">Cancel</button></div>
   </div>
@@ -242,7 +242,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <div class="form">
 <div><label>Reference No.</label><input id="ref" readonly></div>
 <div><label>Tracking Reference</label><input id="trackingReference" placeholder="Enter tracking reference"></div>
-<div><label>Request Date</label><input id="date" type="date"></div>
+<div><label>Request Date</label><input id="date" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"></div>
 <div><label>Agent / Broker</label><input id="agent"></div>
 <div><label>Client / Insured</label><input id="client"></div>
 <div><label>Contact Phone</label><input id="phone" type="tel" placeholder="+971..."></div>
@@ -251,9 +251,9 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <div><label>Cover Type</label><input id="cover"></div>
 <div><label>Priority</label><select id="priority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
 <div><label>Status</label><select id="status"><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select></div>
-<div><label>Follow-up Date</label><input id="follow" type="date"></div>
+<div><label>Follow-up Date</label><input id="follow" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"></div>
 <div><label>Members Count</label><input id="members" type="number"></div>
-<div><label>Policy Expiry</label><input id="expiry" type="date"></div>
+<div><label>Policy Expiry</label><input id="expiry" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"></div>
 <div><label>Previous Premium</label><input id="prevPremium" type="number" step="0.01"></div>
 <div><label>Quoted Premium</label><input id="quotePremium" type="number" step="0.01"></div>
 <div><label>Previous Insurer</label><input id="prevInsurer"></div>
@@ -321,6 +321,12 @@ async function cloudDeleteAll(){
 }
 
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
+function isoToDisplay(v){const t=String(v??'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const [y,m,d]=t.split('-');return `${d}-${m}-${y}`}
+function displayToIso(v){const t=String(v??'').trim();if(!t)return '';if(/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const m=t.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(!m)return t;const [,d,mo,y]=m;const dt=new Date(`${y}-${mo}-${d}T00:00:00`);if(dt.getFullYear()!=Number(y)||dt.getMonth()+1!=Number(mo)||dt.getDate()!=Number(d))return t;return `${y}-${mo}-${d}`}
+function setDateField(id,v){const el=$(id);if(el)el.value=isoToDisplay(v)}
+function dateOrNull(v){const iso=displayToIso(v);return iso===''?null:iso}
+function bindDateInput(id){const el=$(id);if(!el)return;el.addEventListener('blur',()=>{const t=el.value.trim();if(!t)return;const iso=displayToIso(t);if(/^\d{4}-\d{2}-\d{2}$/.test(iso))el.value=isoToDisplay(iso);});el.addEventListener('input',()=>{el.value=el.value.replace(/[^0-9-]/g,'').slice(0,10)})}
+['claimDate','claimFollow','date','follow','expiry'].forEach(bindDateInput);
 
 let editingUser=null;
 const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true},'Main Admin':{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,claims:true,export:false,claimsExport:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false}};
@@ -417,8 +423,8 @@ function openRequestsFromNav(btn){
   $('editorTitle').textContent='New Request';
   clearForm();
   $('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);
-  $('date').value=today();
-  $('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);
+  setDateField('date',today());
+  setDateField('follow',new Date(Date.now()+3*864e5).toISOString().slice(0,10));
   $('dashboard').classList.add('hidden');
   $('editor').classList.remove('hidden');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -725,14 +731,14 @@ function renderClaims(){
   const q=($('claimSearch')?.value||'').toLowerCase(),sf=$('claimStatusFilter')?.value||'',pf=$('claimPriorityFilter')?.value||'';
   const rows=[...claims].sort((a,b)=>rank(a.priority)-rank(b.priority)||(Number(a.serial_no)||0)-(Number(b.serial_no)||0)).filter(r=>
     (!q||[r.policy_number,r.claim_number,r.reference,r.tracking_reference,r.claim_type,r.agent_name,r.client_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf));
-  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.claim_type||'')+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteClaim('+Number(r.serial_no)+')">Delete</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No claims found.</td></tr>';
+  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.claim_type||'')+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(isoToDisplay(r.request_date||''))+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(isoToDisplay(r.follow_up_date||''))+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteClaim('+Number(r.serial_no)+')">Delete</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No claims found.</td></tr>';
 }
 function newClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
   showPage('claimsPage',$('navClaims'));editingClaim=null;$('claimEditorTitle').textContent='New Claim';
   $('claimSerial').value=claims.reduce((m,r)=>Math.max(m,Number(r.serial_no)||0),0)+1;
   ['claimPolicyNo','claimNo','claimReference','claimTrackingReference','claimType','claimAgent','claimClient','claimFollow','claimNotes'].forEach(id=>$(id).value='');
-  $('claimDate').value=today();$('claimStatus').value='Requested';$('claimPriority').value='Normal';$('claimEditor').classList.remove('hidden');
+  setDateField('claimDate',today());$('claimStatus').value='Requested';$('claimPriority').value='Normal';$('claimEditor').classList.remove('hidden');
   window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
 }
 function editClaim(serial){
@@ -740,8 +746,8 @@ function editClaim(serial){
   if(!userCan('edit')){alert('You do not have permission to edit claims.');return}
   editingClaim=serial;$('claimEditorTitle').textContent='Edit Claim #'+serial;
   $('claimSerial').value=r.serial_no||'';$('claimPolicyNo').value=r.policy_number||'';$('claimNo').value=r.claim_number||'';$('claimReference').value=r.reference||'';$('claimTrackingReference').value=r.tracking_reference||'';$('claimType').value=r.claim_type||'';
-  $('claimAgent').value=r.agent_name||'';$('claimClient').value=r.client_name||'';$('claimDate').value=r.request_date||'';$('claimStatus').value=r.status||'Requested';
-  $('claimPriority').value=r.priority||'Normal';$('claimFollow').value=r.follow_up_date||'';$('claimNotes').value=r.notes||'';
+  $('claimAgent').value=r.agent_name||'';$('claimClient').value=r.client_name||'';setDateField('claimDate',r.request_date||'');$('claimStatus').value=r.status||'Requested';
+  $('claimPriority').value=r.priority||'Normal';setDateField('claimFollow',r.follow_up_date||'');$('claimNotes').value=r.notes||'';
   $('claimEditor').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
 }
 function closeClaimEditor(){$('claimEditor').classList.add('hidden');editingClaim=null}
@@ -806,7 +812,7 @@ function render(){
  $('rows').innerHTML=rows.length?rows.map(r=>'<tr>'+
  '<td>#'+esc(r.ref)+'</td>'+
  '<td>'+esc(r.tracking_reference||'')+'</td>'+
- '<td>'+esc(r.date||'')+'</td>'+
+ '<td>'+esc(isoToDisplay(r.date||''))+'</td>'+
  '<td>'+esc(monthLabel(r.date))+'</td>'+
  '<td>'+esc(r.agent||'')+'</td>'+
  '<td>'+esc(r.client||'')+'</td>'+
@@ -816,9 +822,9 @@ function render(){
  '<td>'+esc(r.cover||'')+'</td>'+
  '<td>'+pb(r.priority)+'</td>'+
  '<td>'+badge(r.status)+'</td>'+
- '<td>'+esc(r.follow||'')+'</td>'+
+ '<td>'+esc(isoToDisplay(r.follow||''))+'</td>'+
  '<td>'+esc(r.members??'')+'</td>'+
- '<td>'+esc(r.expiry||'')+'</td>'+
+ '<td>'+esc(isoToDisplay(r.expiry||''))+'</td>'+
  '<td>'+formatMoney(r.prevPremium)+'</td>'+
  '<td>'+formatMoney(r.quotePremium)+'</td>'+
  '<td>'+esc(r.prevInsurer||'')+'</td>'+
@@ -843,17 +849,17 @@ function newRequest(){
   $('editorTitle').textContent='New Request';
   clearForm();
   $('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);
-  $('date').value=today();
-  $('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);
+  setDateField('date',today());
+  setDateField('follow',new Date(Date.now()+3*864e5).toISOString().slice(0,10));
   if(dashboard) dashboard.classList.add('hidden');
   editor.classList.remove('hidden');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function clearForm(){['agent','client','phone','email','trackingReference','cover','follow','members','expiry','prevPremium','quotePremium','prevInsurer','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
-function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
+function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});['date','follow','expiry'].forEach(k=>setDateField(k,r[k]||''));$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
 async function save(){
 let r={
-ref:Number($('ref').value),tracking_reference:$('trackingReference').value.trim(),date:$('date').value,agent:$('agent').value,client:$('client').value,
+ref:Number($('ref').value),tracking_reference:$('trackingReference').value.trim(),date:displayToIso($('date').value),agent:$('agent').value,client:$('client').value,
 phone:$('phone').value,email:$('email').value,business:$('business').value,cover:$('cover').value,
 priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),
 members:numOrNull($('members').value),expiry:dateOrNull($('expiry').value),prevPremium:numOrNull($('prevPremium').value),quotePremium:numOrNull($('quotePremium').value),
@@ -915,6 +921,10 @@ async function exportExcel(){
 
   ws.addRow(headers);
   body.forEach(row=>ws.addRow(row));
+  // Excel date columns: Request Date, Follow-up Date, Policy Expiry
+  for(let r=2;r<=ws.rowCount;r++){
+    [4,15,17].forEach(c=>{const cell=ws.getCell(r,c);const v=cell.value;if(typeof v==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v)){const [y,m,d]=v.split('-').map(Number);cell.value=new Date(Date.UTC(y,m-1,d));cell.numFmt='dd-mm-yyyy';}});
+  }
 
   const headerFill='1F4E78';
   const headerFont='FFFFFF';
