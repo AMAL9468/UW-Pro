@@ -263,6 +263,8 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 */
 const SUPABASE_URL = 'https://ycbghdoeljtxsjvbprkb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_fB_vcUa0VaQPn0aeOnmPMQ_UfWvOeYQ';
+const MAIN_ADMIN_USERNAME = 'admin';
+const MAIN_ADMIN_EMAIL = 'amalkrishnakk73@gmail.com';
 const CLOUD_ENABLED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 // Schema addition required once in Supabase SQL Editor: ALTER TABLE uw_requests ADD COLUMN IF NOT EXISTS tracking_reference text; ALTER TABLE uw_claims ADD COLUMN IF NOT EXISTS tracking_reference text;
 const supa = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
@@ -507,30 +509,48 @@ async function login(){
   if(!identifier||!password){alert('Enter username/email and password.');return}
   if(!CLOUD_ENABLED){alert('Cloud login is not configured.');return}
   try{
-    // Find the UW Pro username first, then authenticate against Supabase Auth using its email.
+    // Main Admin has a fixed username/email mapping so login still works if the
+    // profile lookup is temporarily blocked by an RLS policy.
+    let profile=null, lookupError=null;
     const lookup=identifier.includes('@')
       ? await supa.from('uw_users').select('*').eq('email',identifier).maybeSingle()
       : await supa.from('uw_users').select('*').eq('username',identifier).maybeSingle();
-    if(lookup.error) throw lookup.error;
-    if(!lookup.data){alert('Username or password wrong.');return}
-    if(lookup.data.active===false){alert('This user account is disabled.');return}
-    const {data:authData,error:authError}=await supa.auth.signInWithPassword({
-      email:lookup.data.email,password
-    });
+    profile=lookup.data; lookupError=lookup.error;
+
+    const isKnownAdmin = identifier.toLowerCase()===MAIN_ADMIN_USERNAME || identifier.toLowerCase()===MAIN_ADMIN_EMAIL.toLowerCase();
+    const email = profile?.email || (isKnownAdmin ? MAIN_ADMIN_EMAIL : '');
+    if(!email){
+      if(lookupError) throw lookupError;
+      alert('Username or password wrong.');return;
+    }
+    if(profile?.active===false){alert('This user account is disabled.');return}
+
+    const {data:authData,error:authError}=await supa.auth.signInWithPassword({email,password});
     if(authError) throw authError;
     if(!authData.user){alert('Login failed.');return}
-    currentUser=lookup.data;
-    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(lookup.data.permissions||{})};
-    isMainAdmin=lookup.data.role==='Main Admin';
-    sessionStorage.uw=1; sessionStorage.userEmail=lookup.data.email; sessionStorage.isAdmin=isMainAdmin?'1':'0';
-    $('login').classList.add('hidden'); $('who').textContent=lookup.data.username;
+
+    // If the Admin profile row was not readable, use the known Admin identity
+    // for the session; normal users still require their uw_users profile row.
+    if(!profile && isKnownAdmin){
+      profile={username:MAIN_ADMIN_USERNAME,email:MAIN_ADMIN_EMAIL,role:'Main Admin',active:true,permissions:DEFAULT_PERMS['Main Admin']};
+    }
+    if(!profile){await supa.auth.signOut();alert('User profile was not found. Please ask the Main Admin to check this user.');return}
+
+    currentUser=profile;
+    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(profile.permissions||{})};
+    isMainAdmin=profile.role==='Main Admin' || (profile.username===MAIN_ADMIN_USERNAME && profile.email===MAIN_ADMIN_EMAIL);
+    sessionStorage.uw=1; sessionStorage.userEmail=profile.email; sessionStorage.isAdmin=isMainAdmin?'1':'0';
+    $('login').classList.add('hidden'); $('who').textContent=profile.username;
     applyPermissions();
     showPage('mainPage',document.querySelector('.navBtn'));
+    await cloudLoad();
+    if(userCan('claims')) await loadClaims();
   }catch(e){
     console.error(e);
-    const msg=String(e?.message||'').toLowerCase().includes('email not confirmed')
+    const em=String(e?.message||'');
+    const msg=em.toLowerCase().includes('email not confirmed')
       ? 'Email is not confirmed yet. Confirm the user email in Supabase Auth, then try again.'
-      : 'Username or password wrong.';
+      : (em.toLowerCase().includes('invalid login credentials') ? 'Username or password wrong.' : 'Login failed: '+em);
     alert(msg);
   }
 }
@@ -602,8 +622,8 @@ function updateClaimSummary(){
 function renderClaims(){
   const q=($('claimSearch')?.value||'').toLowerCase(),sf=$('claimStatusFilter')?.value||'',pf=$('claimPriorityFilter')?.value||'';
   const rows=[...claims].sort((a,b)=>rank(a.priority)-rank(b.priority)||(Number(a.serial_no)||0)-(Number(b.serial_no)||0)).filter(r=>
-    (!q||[r.policy_number,r.claim_number,r.reference,r.tracking_reference,r.agent_name,r.client_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf));
-  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button></td></tr>').join(''):'<tr><td colspan="13" style="text-align:center;padding:25px">No claims found.</td></tr>';
+    (!q||[r.policy_number,r.claim_number,r.reference,r.tracking_reference,r.claim_type,r.agent_name,r.client_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf));
+  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.claim_type||'')+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No claims found.</td></tr>';
 }
 function newClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
@@ -617,7 +637,7 @@ function editClaim(serial){
   const r=claims.find(x=>Number(x.serial_no)===Number(serial));if(!r)return;
   if(!userCan('edit')){alert('You do not have permission to edit claims.');return}
   editingClaim=serial;$('claimEditorTitle').textContent='Edit Claim #'+serial;
-  $('claimSerial').value=r.serial_no||'';$('claimPolicyNo').value=r.policy_number||'';$('claimNo').value=r.claim_number||'';$('claimReference').value=r.reference||'';$('claimTrackingReference').value=r.tracking_reference||'';
+  $('claimSerial').value=r.serial_no||'';$('claimPolicyNo').value=r.policy_number||'';$('claimNo').value=r.claim_number||'';$('claimReference').value=r.reference||'';$('claimTrackingReference').value=r.tracking_reference||'';$('claimType').value=r.claim_type||'';
   $('claimAgent').value=r.agent_name||'';$('claimClient').value=r.client_name||'';$('claimDate').value=r.request_date||'';$('claimStatus').value=r.status||'Requested';
   $('claimPriority').value=r.priority||'Normal';$('claimFollow').value=r.follow_up_date||'';$('claimNotes').value=r.notes||'';
   $('claimEditor').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
@@ -644,10 +664,10 @@ async function exportClaimsExcel(){
   ws.getRow(1).height=28;ws.getRow(1).eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'1F4E78'}};c.font={bold:true,color:{argb:'FFFFFF'}};c.alignment={horizontal:'center',vertical:'middle'};c.border=border});
   [8,18,18,16,20,20,20,26,14,24,12,38,15].forEach((w,i)=>ws.getColumn(i+1).width=w);
   for(let i=2;i<=ws.rowCount;i++){const row=ws.getRow(i);row.eachCell((c,col)=>{c.border=border;c.alignment={vertical:'middle',wrapText:col===11}});
-    [8,12].forEach(c=>{if(row.getCell(c).value)row.getCell(c).numFmt='dd-mmm-yyyy'});
+    [9,13].forEach(c=>{if(row.getCell(c).value)row.getCell(c).numFmt='dd-mmm-yyyy'});
     const sc={'Requested':'FFF2CC','Registered':'D9EAF7','Addition Info':'FCE4D6','Payment Under Process':'E2F0D9'},pc={'Urgent':'F4CCCC','High':'FCE4D6','Normal':'E7E6E6','Low':'F2F2F2'};
-    if(sc[row.getCell(9).value]){const c=row.getCell(9);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:sc[row.getCell(9).value]}};c.font={bold:true}}
-    if(pc[row.getCell(10).value]){const c=row.getCell(10);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:pc[row.getCell(10).value]}};c.font={bold:true}}
+    if(sc[row.getCell(10).value]){const c=row.getCell(10);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:sc[row.getCell(9).value]}};c.font={bold:true}}
+    if(pc[row.getCell(11).value]){const c=row.getCell(11);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:pc[row.getCell(10).value]}};c.font={bold:true}}
   }
   ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:h.length}};ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:'A4'};
   const b=await wb.xlsx.writeBuffer(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='UW_Pro_General_Claims.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
