@@ -55,7 +55,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 .claimSummaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 @media(max-width:900px){.claimSummaryGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.claimSummaryGrid{grid-template-columns:1fr}}
-.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
+.resetOverlay{position:fixed;inset:0;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:20px;z-index:120}.resetBox{width:min(420px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 20px 55px #0001}.resetBox h2{margin:0 0 6px;color:#1f4e78}.resetBox input{width:100%;padding:12px;margin:7px 0;border:1px solid #d1d5db;border-radius:9px}.resetBox button{width:100%;margin-top:8px}.resetNote{font-size:12px;color:#64748b;line-height:1.5}.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -71,6 +71,21 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <button type="button" class="forgotLink" onclick="forgotPassword()">Forgot password?</button><p class="loginHint">Enter your username or registered email, then use this option to receive a password reset link.</p>
 <p class="loginHint">Authorized users only</p>
 </div></div>
+
+<div id="resetOverlay" class="resetOverlay hidden">
+  <div class="resetBox">
+    <div class="brandMark">UW</div>
+    <h2>UW Pro Password Reset</h2>
+    <p class="muted">Set a new password for your UW Pro account.</p>
+    <label class="loginLabel">New Password</label>
+    <input id="resetPassword" type="password" placeholder="Minimum 6 characters" autocomplete="new-password">
+    <label class="loginLabel">Confirm Password</label>
+    <input id="resetPassword2" type="password" placeholder="Re-enter new password" autocomplete="new-password">
+    <button class="primary" type="button" onclick="completePasswordReset()">Update Password</button>
+    <button class="secondary" type="button" onclick="cancelPasswordReset()">Cancel</button>
+    <p class="resetNote">For your security, this password-reset link can only be used for the intended account.</p>
+  </div>
+</div>
 
 <aside class="sidebar">
   <div class="sideBrand">UW Pro<span>Underwriting Workflow</span></div>
@@ -267,6 +282,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_fB_vcUa0VaQPn0aeOnmPMQ_UfWvOeYQ';
 const MAIN_ADMIN_USERNAME = 'admin';
 const MAIN_ADMIN_EMAIL = 'amalkrishnakk73@gmail.com';
 const CLOUD_ENABLED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+// Production URL used for password-reset links. Add this exact URL to Supabase Auth Redirect URLs.
+const RESET_REDIRECT_URL = 'https://amal9468.github.io/UW-Pro/';
 // Schema addition required once in Supabase SQL Editor: ALTER TABLE uw_requests ADD COLUMN IF NOT EXISTS tracking_reference text; ALTER TABLE uw_claims ADD COLUMN IF NOT EXISTS tracking_reference text;
 const supa = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 // Separate non-persistent Auth client used only to create users, so creating a user never logs the Main Admin out.
@@ -360,7 +377,7 @@ async function adminResetPassword(email){
  email=String(email||'').trim();if(!email){alert('This user does not have a registered email address.');return}
  if(!confirm('Send a password reset link to '+email+'?'))return;
  try{
-   const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});
+   const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:RESET_REDIRECT_URL});
    if(error)throw error;
    alert('Password reset link sent to '+email+'. The user can set a new password from that link.');
  }catch(e){alert('Could not send password reset: '+(e?.message||e))}
@@ -576,16 +593,46 @@ async function forgotPassword(){
   try{
     let email=identifier;
     if(!identifier.includes('@')){const {data,error}=await supa.from('uw_users').select('email').eq('username',identifier).maybeSingle();if(error)throw error;if(!data?.email){alert('Username not found.');return}email=data.email}
-    const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});if(error)throw error;
+    const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:RESET_REDIRECT_URL});if(error)throw error;
     alert('Password reset link sent to the registered email address.');
   }catch(e){alert('Could not send password reset: '+(e?.message||e))}
 }
-async function updatePasswordAfterRecovery(){
-  const p=prompt('Enter your new password (minimum 6 characters):');if(p===null)return;if(p.length<6){alert('Password must be at least 6 characters.');return}
-  const {error}=await supa.auth.updateUser({password:p});if(error){alert('Password update failed: '+error.message);return}
-  alert('Password updated successfully.');try{await supa.auth.signOut()}catch(e){}
+function showPasswordReset(){
+  $('resetOverlay').classList.remove('hidden');
+  $('resetPassword').value='';$('resetPassword2').value='';
+  setTimeout(()=>$('resetPassword')?.focus(),100);
 }
-if(CLOUD_ENABLED)supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(updatePasswordAfterRecovery,300)});
+function cancelPasswordReset(){
+  $('resetOverlay').classList.add('hidden');
+  try{window.history.replaceState({},document.title,RESET_REDIRECT_URL)}catch(e){}
+  try{supa.auth.signOut()}catch(e){}
+}
+async function completePasswordReset(){
+  const p=$('resetPassword').value, p2=$('resetPassword2').value;
+  if(p.length<6){alert('Password must be at least 6 characters.');return}
+  if(p!==p2){alert('Passwords do not match.');return}
+  try{
+    const {error}=await supa.auth.updateUser({password:p});
+    if(error)throw error;
+    alert('UW Pro password updated successfully. Please sign in with your new password.');
+    $('resetOverlay').classList.add('hidden');
+    try{await supa.auth.signOut()}catch(e){}
+    try{window.history.replaceState({},document.title,RESET_REDIRECT_URL)}catch(e){}
+    location.reload();
+  }catch(e){alert('Password update failed: '+(e?.message||e))}
+}
+async function updatePasswordAfterRecovery(){showPasswordReset()}
+if(CLOUD_ENABLED){
+  supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(updatePasswordAfterRecovery,200)});
+  // Also handle a recovery link after the page has already loaded.
+  setTimeout(async()=>{
+    const hash=window.location.hash||'';
+    if(/type=recovery/i.test(hash)){
+      const {data}=await supa.auth.getSession();
+      if(data?.session)showPasswordReset();
+    }
+  },500);
+}
 
 async function logout(){
   try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
