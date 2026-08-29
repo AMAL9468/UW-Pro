@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F4E78">
+<title>UW Pro — Underwriting Workflow Dashboard</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#f5f7fb;color:#172033}
+header{background:#fff;border-bottom:1px solid #e5e7eb;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}.num{font-size:25px;font-weight:800}.muted{color:#64748b;font-size:13px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.toolbar input,.toolbar select,.form input,.form select,.form textarea{padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff}
+.toolbar input{min-width:220px}button{border:0;border-radius:9px;padding:10px 14px;cursor:pointer;font-weight:700}.primary{background:#1f4e78;color:#fff}.secondary{background:#eef2f7;color:#334155}
+.tableWrap{overflow:auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1180px}th,td{padding:11px 10px;border-bottom:1px solid #edf0f4;text-align:left;font-size:13px;white-space:nowrap;background:#fff}th{font-weight:800;color:#334155;background:#f8fafc}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.quoted{background:#fef3c7;color:#92400e}.confirmed{background:#dbeafe;color:#1d4ed8}.issued{background:#dcfce7;color:#15803d}.declined{background:#fee2e2;color:#b91c1c}.pending{background:#fff;color:#475569;border:1px solid #e5e7eb}.urgent{background:#fee2e2;color:#b91c1c}.high{background:#ffedd5;color:#c2410c}.normal{background:#e5e7eb;color:#475569}.low{background:#f1f5f9;color:#64748b}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.form label{font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:5px}.form input,.form select,.form textarea{width:100%}.full{grid-column:1/-1}.actions{display:flex;gap:8px;margin-top:15px}
+.login{position:fixed;inset:0;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.loginBox{width:min(400px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 20px 55px #0001}.loginBox input{width:100%;padding:12px;margin:7px 0;border:1px solid #d1d5db;border-radius:9px}.loginBox button{width:100%;margin-top:8px;background:#1f4e78;color:#fff}.hidden{display:none!important}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:12px}header{padding:13px}.toolbar input{min-width:100%}}
+
+.brandMark{width:48px;height:48px;border-radius:12px;background:#1f4e78;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;margin-bottom:12px}
+.loginBox h1{margin:0 0 4px}.loginLabel{display:block;font-size:12px;font-weight:700;color:#475569;margin-top:9px}
+.loginHint{text-align:center;color:#94a3b8;font-size:12px;margin:14px 0 0}.forgotLink{display:block;width:100%;margin-top:12px!important;background:transparent!important;color:#1f4e78!important;border:1px solid #cbd5e1!important;padding:10px 12px!important;font-size:13px!important}.forgotLink:hover{background:#f1f5f9!important}
+.headerActions{display:flex;align-items:center;gap:10px}
+.statusDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
+.smallCard{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+.sectionTitle{font-size:16px;font-weight:800;margin:0 0 12px}
+.form input[type="number"]{appearance:textfield}
+
+
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:230px;background:#173b5c;color:#fff;padding:22px 14px;z-index:50;display:flex;flex-direction:column}
+.sideBrand{font-size:21px;font-weight:900;padding:4px 12px 24px}
+.sideBrand span{display:block;font-size:11px;font-weight:500;opacity:.7;margin-top:4px}
+.navBtn{width:100%;text-align:left;background:transparent;color:#dbeafe;border:0;padding:12px 13px;border-radius:9px;margin:3px 0;font-weight:700}
+.navBtn:hover,.navBtn.active{background:#285a82;color:#fff}
+.sideBottom{margin-top:auto;padding:12px;font-size:11px;color:#b8c9d8;line-height:1.5}
+.mainShell{margin-left:230px}
+.page{display:none}.page.active{display:block}
+.reportGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.reportCard{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}
+.reportCard .big{font-size:27px;font-weight:900;margin-top:5px}
+.barWrap{margin:9px 0 14px}.barLabel{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.bar{height:9px;background:#edf2f7;border-radius:99px;overflow:hidden}.bar>i{display:block;height:100%;background:#1f4e78;border-radius:99px}
+.quickGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.followupSection{margin-bottom:18px}.followupSection h3{margin:0 0 10px;font-size:14px}.followupItem{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:8px;background:#fff}.followupItem.overdue{border-left:5px solid #dc2626}.followupItem.today{border-left:5px solid #d97706}.followupItem.upcoming{border-left:5px solid #2563eb}.followupMeta{font-size:12px;color:#64748b;margin-top:4px}.followupAction{white-space:nowrap}.reminderBadge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800}.reminderBadge.overdue{background:#fee2e2;color:#b91c1c}.reminderBadge.today{background:#fef3c7;color:#92400e}.reminderBadge.upcoming{background:#dbeafe;color:#1d4ed8}
+@media(max-width:800px){.sidebar{width:72px;padding:14px 8px}.sideBrand{font-size:0;text-align:center}.sideBrand:before{content:'UW';font-size:18px}.sideBrand span{display:none}.navBtn{font-size:0;text-align:center;padding:13px 5px}.navBtn:before{content:'•';font-size:20px}.sideBottom{display:none}.mainShell{margin-left:72px}.reportGrid{grid-template-columns:1fr}.quickGrid{grid-template-columns:1fr}}
+
+
+.claimStatus{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.claim-requested{background:#fef3c7;color:#92400e}.claim-registered{background:#dbeafe;color:#1d4ed8}
+.claim-addition-info{background:#ffedd5;color:#c2410c}.claim-payment-under-process{background:#dcfce7;color:#15803d}
+.claim-urgent{background:#fee2e2;color:#b91c1c}.claim-high{background:#ffedd5;color:#c2410c}
+.claim-normal{background:#e5e7eb;color:#475569}.claim-low{background:#f1f5f9;color:#64748b}
+.claimSummaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.claimSummaryGrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.claimSummaryGrid{grid-template-columns:1fr}}
+.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="login" class="login"><div class="loginBox">
+<div class="brandMark">UW</div>
+<h1>UW Pro</h1><p class="muted">Underwriting Workflow Dashboard</p>
+<label class="loginLabel">Username</label>
+<input id="user" placeholder="Enter username" autocomplete="username">
+<label class="loginLabel">Password</label>
+<input id="pass" type="password" placeholder="Enter password" autocomplete="current-password">
+<button onclick="login()">Sign in</button>
+<button type="button" class="forgotLink" onclick="forgotPassword()">Forgot password?</button><p class="loginHint">Enter your username or registered email, then use this option to receive a password reset link.</p>
+<p class="loginHint">Authorized users only</p>
+</div></div>
+
+<aside class="sidebar">
+  <div class="sideBrand">UW Pro<span>Underwriting Workflow</span></div>
+  <button id="navMain" class="navBtn active" onclick="showPage('mainPage',this)">Main</button>
+  <button id="navReports" class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
+  <button id="navRequests" class="navBtn" onclick="showPage('requestsPage',this)">Requests</button>
+  <button id="navFollowups" class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
+  <button id="navClaims" class="navBtn" onclick="showPage('claimsPage',this)">Claims</button>
+  <button id="navUsers" class="navBtn" onclick="showPage('usersPage',this)">Users</button>
+  <button class="navBtn" onclick="showPage('settingsPage',this)">Settings</button>
+  <div class="sideBottom"><span class="statusDot"></span> Cloud sync<br><span id="syncStatus">Not configured</span></div>
+</aside>
+
+<div class="mainShell">
+<header><div><h1>UW Pro</h1><span class="muted">Underwriting Workflow</span></div>
+<div class="headerActions"><span class="muted" id="who"></span> <button class="secondary" onclick="logout()">Logout</button></div></header>
+
+<main class="wrap">
+<div id="mainPage" class="page active">
+<div id="dashboard">
+<div class="grid">
+<div class="card"><div class="muted">Total Requests</div><div class="num" id="total">0</div></div>
+<div class="card"><div class="muted">Quoted</div><div class="num" id="quoted">0</div></div>
+<div class="card"><div class="muted">Confirmed</div><div class="num" id="confirmed">0</div></div>
+<div class="card"><div class="muted">Follow-ups Due</div><div class="num" id="due">0</div></div><div class="card"><div class="muted">Overdue Open</div><div class="num" id="overdue">0</div></div>
+</div>
+<div class="smallCard" style="margin-top:14px">
+  <div class="sectionTitle">System Status</div>
+  <span class="statusDot"></span><span class="muted">Cloud database ready</span>
+  <span class="muted" style="margin-left:18px">Changes are synced across devices when Supabase is configured.</span>
+</div>
+
+<div class="toolbar">
+<input id="search" placeholder="Search client, reference, agent..." oninput="render()">
+<select id="statusFilter" onchange="render()"><option value="">All Status</option><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select>
+<select id="priorityFilter" onchange="render()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
+<select id="businessFilter" onchange="render()"><option value="">All Business</option><option>Group Medical</option><option>General Non-Motor</option></select><select id="monthFilter" onchange="render()"><option value="">All Months</option></select>
+<button class="primary" onclick="newRequest()">+ New Request</button>
+<button id="exportBtn" class="secondary" onclick="exportExcel()">Export Excel</button><button id="clearAllBtn" class="secondary" onclick="clearAllData()">Clear All Data</button>
+</div>
+
+<div class="card" style="margin-bottom:14px"><b>Priority Work Plan</b>
+<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px">
+<span class="badge urgent">Urgent <b id="pu">0</b></span><span class="badge high">High <b id="ph">0</b></span><span class="badge normal">Normal <b id="pn">0</b></span><span class="badge low">Low <b id="pl">0</b></span>
+</div></div>
+
+<div class="tableWrap"><table><thead><tr><th>Ref</th><th>Tracking Reference</th><th>Date</th><th>Month</th><th>Agent</th><th>Client</th><th>Contact</th><th>Business</th><th>Cover</th><th>Sum Insured</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+</div>
+
+<div id="reportsPage" class="page">
+  <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">Reports & Analytics</h2><div class="muted">Live summary from your underwriting requests.</div></div>
+  <div class="reportGrid">
+    <div class="reportCard"><div class="muted">Total Requests</div><div class="big" id="repTotal">0</div></div>
+    <div class="reportCard"><div class="muted">Open Requests</div><div class="big" id="repOpen">0</div></div>
+    <div class="reportCard"><div class="muted">Quoted Premium</div><div class="big" id="repPremium">0.00</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="sectionTitle">Status Distribution</div>
+    <div id="statusBars"></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="sectionTitle">Monthly Requests</div>
+    <div id="monthBars"></div>
+  </div>
+  <div class="card">
+    <div class="sectionTitle">Priority Distribution</div>
+    <div id="priorityBars"></div>
+  </div>
+</div>
+
+<div id="requestsPage" class="page">
+  <div class="card"><h2 class="sectionTitle">Requests</h2><div class="muted">Use Main for the dashboard and filters, or create a new request below.</div><div class="actions"><button class="primary" onclick="newRequest()">+ New Request</button><button class="secondary" onclick="showPage('mainPage',document.querySelector('.navBtn'))">Open Main Dashboard</button></div></div>
+</div>
+
+<div id="followupsPage" class="page">
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><h2 class="sectionTitle" style="margin-bottom:4px">Follow-up Reminder Center</h2><div class="muted">See overdue, today's and upcoming follow-ups in one place.</div></div>
+      <button id="notifyBtn" class="secondary" onclick="enableNotifications()">Enable Notifications</button>
+    </div>
+    <div class="grid" style="margin-top:14px;grid-template-columns:repeat(3,1fr)">
+      <div class="smallCard"><div class="muted">Overdue</div><div class="num" id="fuOverdue">0</div></div>
+      <div class="smallCard"><div class="muted">Due Today</div><div class="num" id="fuToday">0</div></div>
+      <div class="smallCard"><div class="muted">Next 7 Days</div><div class="num" id="fuUpcoming">0</div></div>
+    </div>
+  </div>
+  <div class="card"><div id="followupList" class="muted">No follow-ups scheduled.</div></div>
+</div>
+
+
+<div id="claimsPage" class="page">
+  <div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div><h2 class="sectionTitle" style="margin-bottom:4px">General Claims</h2><div class="muted">Manage general claims, status, priority and follow-ups.</div></div>
+    <div class="actions" style="margin-top:0"><button id="claimExportBtn" class="secondary" onclick="exportClaimsExcel()">Export Claims Excel</button><button id="claimNewBtn" class="primary" onclick="newClaim()">+ New Claim</button></div>
+  </div></div>
+  <div class="claimSummaryGrid" style="margin-bottom:14px">
+    <div class="card"><div class="muted">Total Claims</div><div class="num" id="claimTotal">0</div></div>
+    <div class="card"><div class="muted">Requested</div><div class="num" id="claimRequested">0</div></div>
+    <div class="card"><div class="muted">Addition Info</div><div class="num" id="claimAdditionInfo">0</div></div>
+    <div class="card"><div class="muted">Payment Under Process</div><div class="num" id="claimPayment">0</div></div>
+  </div>
+  <div class="toolbar">
+    <input id="claimSearch" placeholder="Search policy, claim, client, agent, claim type..." oninput="renderClaims()">
+    <select id="claimStatusFilter" onchange="renderClaims()"><option value="">All Status</option><option>Requested</option><option>Registered</option><option>Addition Info</option><option>Payment Under Process</option></select>
+    <select id="claimPriorityFilter" onchange="renderClaims()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
+  </div>
+  <div class="tableWrap"><table style="min-width:1350px"><thead><tr>
+    <th>S.No.</th><th>Policy No.</th><th>Claim No.</th><th>Reference</th><th>Tracking Reference</th><th>Type of Claim</th><th>Agent Name</th><th>Client Name</th><th>Request Date</th><th>Status</th><th>Priority</th><th>Notes</th><th>Follow-up Date</th><th>Action</th>
+  </tr></thead><tbody id="claimRows"></tbody></table></div>
+  <div id="claimEditor" class="card hidden" style="margin-top:14px"><h2 id="claimEditorTitle" class="sectionTitle">New Claim</h2>
+    <div class="form">
+      <div><label>Serial No.</label><input id="claimSerial" readonly></div><div><label>Policy Number</label><input id="claimPolicyNo"></div><div><label>Claim Number</label><input id="claimNo"></div>
+      <div><label>Reference</label><input id="claimReference"></div><div><label>Tracking Reference</label><input id="claimTrackingReference" placeholder="Enter tracking reference"></div><div><label>Type of Claim</label><input id="claimType" placeholder="e.g. Motor, Medical, Travel"></div><div><label>Agent Name</label><input id="claimAgent"></div><div><label>Client Name</label><input id="claimClient"></div>
+      <div><label>Request Date</label><input id="claimDate" type="date"></div><div><label>Status</label><select id="claimStatus"><option>Requested</option><option>Registered</option><option>Addition Info</option><option>Payment Under Process</option></select></div>
+      <div><label>Priority</label><select id="claimPriority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
+      <div><label>Follow-up Date</label><input id="claimFollow" type="date"></div><div class="full"><label>Notes</label><textarea id="claimNotes" rows="4" placeholder="Add claim notes, requirements or follow-up details..."></textarea></div>
+    </div>
+    <div class="actions"><button id="saveClaimBtn" class="primary" onclick="saveClaim()">Save / Update Claim</button><button class="secondary" onclick="closeClaimEditor()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="usersPage" class="page">
+  <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">User Management</h2><div class="muted">Manage UW Pro roles and permissions. This page is visible to the Main Admin. Users are authenticated securely with Supabase Auth. Passwords are never stored in the UW Pro table.</div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="actions" style="margin-top:0"><button class="primary" onclick="openUserForm()">+ Create User</button><button class="secondary" onclick="loadUsers()">Refresh</button></div>
+    <div class="tableWrap" style="margin-top:14px"><table style="min-width:850px"><thead><tr><th>User</th><th>Role</th><th>Main</th><th>Reports</th><th>Requests</th><th>Follow-ups</th><th>Status</th><th>Action</th></tr></thead><tbody id="userRows"></tbody></table></div>
+  </div>
+  <div id="userForm" class="card hidden">
+    <h3 class="sectionTitle">Create / Edit User</h3>
+    <div class="form">
+      <div><label>Username</label><input id="uName" placeholder="e.g. john"></div>
+      <div><label>Email</label><input id="uEmail" type="email" placeholder="john@company.com"></div>
+      <div><label>Password</label><input id="uPass" type="password" placeholder="Minimum 6 characters"></div>
+      <div><label>Role</label><select id="uRole" onchange="applyRoleDefaults()"><option>Underwriter</option><option>Viewer</option><option>Custom</option><option>Main Admin</option></select></div>
+      <div><label>Status</label><select id="uActive"><option value="true">Active</option><option value="false">Disabled</option></select></div>
+      <div><label>Permission Summary</label><input id="uPermSummary" readonly></div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
+      <label><input type="checkbox" id="pMain"> Main</label><label><input type="checkbox" id="pReports"> Reports</label><label><input type="checkbox" id="pRequests"> Requests</label><label><input type="checkbox" id="pFollow"> Follow-ups</label><label><input type="checkbox" id="pExport"> Excel Export</label><label><input type="checkbox" id="pEdit"> Create/Edit</label><label><input type="checkbox" id="pDelete"> Delete</label><label><input type="checkbox" id="pClaims"> Claims</label><label><input type="checkbox" id="pClaimsExport"> Claims Excel</label>
+    </div>
+    <div class="actions"><button class="primary" onclick="saveUser()">Save User</button><button class="secondary" onclick="closeUserForm()">Cancel</button></div>
+  </div>
+</div>
+
+<div id="settingsPage" class="page">
+  <div class="card">
+    <h2 class="sectionTitle">System Settings</h2>
+    <p class="muted">Cloud database status: <b id="settingsSync">Not configured</b></p>
+    <p class="muted">Supabase cloud sync is configured for this project. Make sure the UW Pro SQL schema has been run in Supabase before saving data. Tracking Reference is included for Claims and all underwriting requests (Medical / General).</p>
+    <p class="muted"><b>RLS note:</b> If Save shows a Row Level Security error, run the accompanying <b>UW_Pro_RLS_Fix.sql</b> in your Supabase SQL Editor once. Do not put a service-role key in this HTML.</p>
+  </div>
+</div>
+
+<div id="editor" class="card hidden"><h2 id="editorTitle">New Request</h2>
+<div class="form">
+<div><label>Reference No.</label><input id="ref" readonly></div>
+<div><label>Tracking Reference</label><input id="trackingReference" placeholder="Enter tracking reference"></div>
+<div><label>Request Date</label><input id="date" type="date"></div>
+<div><label>Agent / Broker</label><input id="agent"></div>
+<div><label>Client / Insured</label><input id="client"></div>
+<div><label>Contact Phone</label><input id="phone" type="tel" placeholder="+971..."></div>
+<div><label>Email</label><input id="email" type="email" placeholder="client@example.com"></div>
+<div><label>Business Type</label><select id="business"><option>Group Medical</option><option>General Non-Motor</option></select></div>
+<div><label>Cover Type</label><input id="cover"></div>
+<div><label>Sum Insured</label><input id="sumInsured" type="number" step="0.01" placeholder="0.00"></div>
+<div><label>Priority</label><select id="priority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
+<div><label>Status</label><select id="status"><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select></div>
+<div><label>Follow-up Date</label><input id="follow" type="date"></div>
+<div><label>Members Count</label><input id="members" type="number"></div>
+<div><label>Policy Expiry</label><input id="expiry" type="date"></div>
+<div><label>Previous Premium</label><input id="prevPremium" type="number" step="0.01"></div>
+<div><label>Quoted Premium</label><input id="quotePremium" type="number" step="0.01"></div>
+<div><label>Previous Insurer</label><input id="prevInsurer"></div>
+<div><label>Previous Policy No.</label><input id="prevPolicy"></div>
+<div><label>Policy / Risk Type</label><input id="policyType"></div>
+<div><label>Quotation Deadline</label><input id="quoteDeadline" type="date"></div>
+<div class="full"><label>Remarks</label><textarea id="remarks" rows="3" placeholder="Add underwriting notes, requirements, exclusions or follow-up details..."></textarea></div>
+</div><div class="actions"><button id="saveRequestBtn" class="primary" onclick="save()">Save / Update</button><button class="secondary" onclick="closeEditor()">Cancel</button></div>
+</div>
+</main>
+</div>
+
+<script>
+
+/* =========================
+   SUPABASE CLOUD CONFIG
+   =========================
+   Paste your own values here after creating a Supabase project.
+   Never put a service_role key in this file.
+*/
+const SUPABASE_URL = 'https://ycbghdoeljtxsjvbprkb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_fB_vcUa0VaQPn0aeOnmPMQ_UfWvOeYQ';
+const MAIN_ADMIN_USERNAME = 'admin';
+const MAIN_ADMIN_EMAIL = 'amalkrishnakk73@gmail.com';
+const CLOUD_ENABLED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+// Schema addition required once in Supabase SQL Editor: ALTER TABLE uw_requests ADD COLUMN IF NOT EXISTS tracking_reference text; ALTER TABLE uw_claims ADD COLUMN IF NOT EXISTS tracking_reference text;
+const supa = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
+// Separate non-persistent Auth client used only to create users, so creating a user never logs the Main Admin out.
+const authAdminHelper = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}) : null;
+
+const KEY='uwpro_requests_v1';
+let data=JSON.parse(localStorage.getItem(KEY)||'[]'),editing=null;
+
+function setSyncStatus(t){
+  const a=$('syncStatus'),b=$('settingsSync');
+  if(a)a.textContent=t;if(b)b.textContent=t;
+}
+async function cloudLoad(){
+  if(!CLOUD_ENABLED){setSyncStatus('Local only');return}
+  setSyncStatus('Connecting...');
+  const {data:rows,error}=await supa.from('uw_requests').select('*').order('ref',{ascending:false});
+  if(error){console.error(error);setSyncStatus('Connection error');return}
+  data=(rows||[]).map(normalizeRow);localStorage.setItem(KEY,JSON.stringify(data));setSyncStatus('Connected');
+  render(); updateReports(); updateFollowups();
+}
+async function cloudUpsert(r){
+  if(!CLOUD_ENABLED)return true;
+  const {data:sessionData}=await supa.auth.getSession();
+  if(!sessionData?.session){
+    alert('Cloud save failed: No active Supabase login session. Please sign in again.');
+    setSyncStatus('Login required');
+    return false;
+  }
+  const {error}=await supa.from('uw_requests').upsert(r,{onConflict:'ref'});
+  if(error){
+    console.error('UW Pro cloud save error:',error);
+    if(String(error.message||'').toLowerCase().includes('row-level security')){
+      alert('Cloud save is blocked by Supabase Row Level Security (RLS).\n\nPlease run the UW Pro RLS SQL supplied with this final HTML in Supabase SQL Editor, then sign in again.');
+    }else{
+      alert('Cloud save failed: '+error.message);
+    }
+    setSyncStatus('Save error');return false;
+  }
+  setSyncStatus('Connected');return true;
+}
+async function cloudDeleteAll(){
+  if(!CLOUD_ENABLED)return true;
+  const req=await supa.from('uw_requests').delete().not('ref','is',null);
+  if(req.error){alert('Cloud request delete failed: '+req.error.message);return false}
+  const cl=await supa.from('uw_claims').delete().not('serial_no','is',null);
+  if(cl.error){alert('Cloud claims delete failed: '+cl.error.message);return false}
+  // Verify both tables are empty before clearing local copies.
+  const [rq,cc]=await Promise.all([
+    supa.from('uw_requests').select('ref',{count:'exact',head:true}),
+    supa.from('uw_claims').select('serial_no',{count:'exact',head:true})
+  ]);
+  if(rq.error || cc.error){alert('Global delete verification failed. Local data was kept safe.');return false}
+  if((rq.count||0)!==0 || (cc.count||0)!==0){alert('Global delete was not fully completed. Local data was kept safe.');return false}
+  return true;
+}
+
+const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
+
+let editingUser=null;
+const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true},'Main Admin':{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,claims:true,export:false,claimsExport:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false}};
+function applyRoleDefaults(){const r=$('uRole').value,p=DEFAULT_PERMS[r]||DEFAULT_PERMS.Custom;['Main','Reports','Requests','Follow','Claims','ClaimsExport','Export','Edit','Delete'].forEach((x,i)=>{const el=$('p'+x);if(el)el.checked=!!p[['main','reports','requests','followups','claims','claimsExport','export','edit','del'][i]]});updatePermSummary()}
+function updatePermSummary(){const names=[['pMain','Main'],['pReports','Reports'],['pRequests','Requests'],['pFollow','Follow-ups'],['pClaims','Claims'],['pClaimsExport','Claims Excel'],['pExport','Excel'],['pEdit','Edit'],['pDelete','Delete']];$('uPermSummary').value=names.filter(x=>$(x[0])?.checked).map(x=>x[1]).join(', ')||'None'}
+function openUserForm(u=null){editingUser=u?.id||null;$('userForm').classList.remove('hidden');$('uName').value=u?.username||'';$('uEmail').value=u?.email||'';$('uPass').value='';$('uRole').value=u?.role||'Underwriter';$('uActive').value=String(u?.active!==false);const p=u?.permissions||DEFAULT_PERMS[$('uRole').value]||DEFAULT_PERMS.Custom;[['pMain','main'],['pReports','reports'],['pRequests','requests'],['pFollow','followups'],['pExport','export'],['pEdit','edit'],['pDelete','del']].forEach(([id,k])=>$(id).checked=!!p[k]);updatePermSummary();window.scrollTo({top:0,behavior:'smooth'})}
+function closeUserForm(){$('userForm').classList.add('hidden');editingUser=null}
+async function loadUsers(){
+ if(!CLOUD_ENABLED){$('userRows').innerHTML='<tr><td colspan="8">Supabase cloud is not configured.</td></tr>';return}
+ const {data:rows,error}=await supa.from('uw_users').select('*').order('username');
+ if(error){$('userRows').innerHTML='<tr><td colspan="8">Create the uw_users table using the supplied SQL first.</td></tr>';return}
+ $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.claims&&'Claims',p.claimsExport&&'Claims Excel',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td style="white-space:nowrap"><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button> <button class="secondary" onclick="adminResetPassword(\''+u.email+'\')">Reset Password</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteUser(\''+u.id+'\')">Delete</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
+}
+async function deleteUser(userId){
+ if(!isMainAdmin){alert('Main Admin access only.');return}
+ if(!userId){alert('Invalid user.');return}
+ const ok=confirm('Delete this user?\n\nThis removes the UW Pro user record and permissions. Their Supabase Auth account may remain until it is removed from Supabase Auth by an administrator.');
+ if(!ok)return;
+ if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
+ try{
+   const {error}=await supa.from('uw_users').delete().eq('id',userId);
+   if(error)throw error;
+   alert('User deleted from UW Pro successfully.');
+   if(editingUser===userId)closeUserForm();
+   await loadUsers();
+ }catch(e){
+   console.error(e);
+   alert('User delete failed: '+(e?.message||e));
+ }
+}
+async function adminResetPassword(email){
+ if(!isMainAdmin){alert('Main Admin access only.');return}
+ if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
+ email=String(email||'').trim();if(!email){alert('This user does not have a registered email address.');return}
+ if(!confirm('Send a password reset link to '+email+'?'))return;
+ try{
+   const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});
+   if(error)throw error;
+   alert('Password reset link sent to '+email+'. The user can set a new password from that link.');
+ }catch(e){alert('Could not send password reset: '+(e?.message||e))}
+}
+
+async function saveUser(){
+ const username=$('uName').value.trim(),email=$('uEmail').value.trim(),password=$('uPass').value,role=$('uRole').value;
+ if(!username||!email){alert('Username and email are required.');return}
+ if(!editingUser && password.length<6){alert('For a new user, password must be at least 6 characters.');return}
+ const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,claims:$('pClaims').checked,claimsExport:$('pClaimsExport').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
+ if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
+ try{
+   if(editingUser){
+     const row={id:editingUser,username,email,role,active:$('uActive').value==='true',permissions};
+     const {error}=await supa.from('uw_users').upsert(row,{onConflict:'id'});
+     if(error)throw error;
+     // Password changes are intentionally not stored in the database.
+     if(password) alert('User details updated. To change the login password, use Supabase Auth password reset.');
+   }else{
+     // Create the Auth account through a separate non-persistent client.
+     // This preserves the Main Admin's active session in the main client.
+     const {data:authData,error:authError}=await authAdminHelper.auth.signUp({email,password});
+     if(authError)throw authError;
+     const row={username,email,role,active:$('uActive').value==='true',permissions};
+     const {error:rowError}=await supa.from('uw_users').insert(row);
+     if(rowError)throw rowError;
+     alert(authData?.user
+       ? 'User created successfully. They can log in with the email/username and password.'
+       : 'User created.');
+   }
+   closeUserForm();await loadUsers();
+ }catch(e){
+   console.error(e);
+   alert('User save failed: '+(e?.message||e));
+ }
+}
+
+function userCan(permission){return true}
+
+function showPage(id,btn){
+  const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',followupsPage:'followups',claimsPage:'claims'};
+  if(id==='usersPage'&&!isMainAdmin){alert('Main Admin access only.');return}
+  if(required[id]&&!userCan(required[id])){alert('You do not have permission to open this section.');return}
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  const p=$(id);if(p)p.classList.add('active');
+  // The request editor and user form live outside the page containers.
+  // Always close them when navigating so they cannot appear at the bottom of another page.
+  if(id!=='mainPage'){
+    const ed=$('editor');if(ed)ed.classList.add('hidden');
+    const dash=$('dashboard');if(dash)dash.classList.remove('hidden');
+    const uf=$('userForm');if(uf)uf.classList.add('hidden');
+  }
+  document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'instant'});
+  if(id==='reportsPage')updateReports();
+  if(id==='followupsPage')updateFollowups();
+  if(id==='claimsPage')loadClaims();
+  if(id==='usersPage')loadUsers();
+}
+function updateReports(){
+  const total=data.length, open=data.filter(r=>!['Issued','Declined'].includes(r.status)).length;
+  const prem=data.reduce((s,r)=>s+(Number(r.quotePremium)||0),0);
+  if($('repTotal'))$('repTotal').textContent=total;
+  if($('repOpen'))$('repOpen').textContent=open;
+  if($('repPremium'))$('repPremium').textContent=prem.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const statuses=['Pending','Quoted','Confirmed','Issued','Declined'];
+  $('statusBars').innerHTML=statuses.map(s=>{
+    const n=data.filter(r=>r.status===s).length,p=total?Math.round(n/total*100):0;
+    return '<div class="barWrap"><div class="barLabel"><span>'+s+'</span><b>'+n+'</b></div><div class="bar"><i style="width:'+p+'%"></i></div></div>';
+  }).join('');
+  const priorities=['Urgent','High','Normal','Low'];
+  const months=[...new Set(data.map(r=>monthKey(r.date)).filter(Boolean))].sort().reverse().slice(0,12);
+  $('monthBars').innerHTML=months.length?months.map(k=>{const n=data.filter(r=>monthKey(r.date)===k).length,p=total?Math.round(n/total*100):0;return '<div class="barWrap"><div class="barLabel"><span>'+monthLabel(k)+'</span><b>'+n+'</b></div><div class="bar"><i style="width:'+p+'%"></i></div></div>';}).join(''):'<div class="muted">No dated requests yet.</div>';
+  $('priorityBars').innerHTML=priorities.map(s=>{
+    const n=data.filter(r=>r.priority===s).length,p=total?Math.round(n/total*100):0;
+    return '<div class="barWrap"><div class="barLabel"><span>'+s+'</span><b>'+n+'</b></div><div class="bar"><i style="width:'+p+'%"></i></div></div>';
+  }).join('');
+}
+function normalizeDate(v){
+  if(v==null||v==='')return null;
+  const m=String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m?m[1]:null;
+}
+function normalizeRow(r){
+  return {...r, date:normalizeDate(r.date)||r.date, follow:normalizeDate(r.follow), expiry:normalizeDate(r.expiry), quoteDeadline:normalizeDate(r.quoteDeadline)};
+}
+function dateDiff(a,b){
+  a=normalizeDate(a); b=normalizeDate(b); if(!a||!b)return NaN;
+  return Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000);
+}
+function dueGroups(field){
+  const t=today();
+  const active=data.filter(r=>r[field]&&!['Issued','Declined'].includes(r.status));
+  return {
+    overdue:active.filter(r=>normalizeDate(r[field])<t).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field)))),
+    today:active.filter(r=>normalizeDate(r[field])===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
+    upcoming:active.filter(r=>normalizeDate(r[field])>t&&dateDiff(r[field],t)<=7).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field))))
+  };
+}
+function rValue(r,field){return normalizeDate(r[field])||''}
+function followupGroups(){return dueGroups('follow')}
+function deadlineGroups(){return dueGroups('quoteDeadline')}
+function updateFollowups(){
+  const g=followupGroups(), d=deadlineGroups();
+  if($('fuOverdue'))$('fuOverdue').textContent=g.overdue.length;
+  if($('fuToday'))$('fuToday').textContent=g.today.length;
+  if($('fuUpcoming'))$('fuUpcoming').textContent=g.upcoming.length;
+  const section=(title,items,field)=>{
+    if(!items.length)return '';
+    return '<div class="followupSection"><h3>'+title+'</h3>'+items.map(r=>{
+      const dt=normalizeDate(r[field]); const diff=dateDiff(dt,today());
+      const type=diff<0?'overdue':diff===0?'today':'upcoming';
+      const label=type==='overdue'?'Overdue by '+Math.abs(diff)+' day'+(Math.abs(diff)===1?'':'s'):type==='today'?'Due today':'Due in '+diff+' day'+(diff===1?'':'s');
+      const kind=field==='follow'?'Follow-up':'Quotation deadline';
+      return '<div class="followupItem '+type+'"><div><b>#'+r.ref+' — '+esc(r.client)+'</b><div class="followupMeta">'+esc(r.agent||'')+' · '+esc(r.status||'')+' · '+kind+': '+esc(dt)+'</div></div><div class="followupAction"><span class="reminderBadge '+type+'">'+label+'</span> <button class="secondary" onclick="edit('+Number(r.ref)+')">Open</button></div></div>';
+    }).join('')+'</div>';
+  };
+  const html=section('Follow-ups — Overdue',g.overdue,'follow')+section('Follow-ups — Due Today',g.today,'follow')+section('Follow-ups — Next 7 Days',g.upcoming,'follow')+section('Quotation Deadlines — Overdue',d.overdue,'quoteDeadline')+section('Quotation Deadlines — Today',d.today,'quoteDeadline')+section('Quotation Deadlines — Next 7 Days',d.upcoming,'quoteDeadline');
+  $('followupList').innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups or quotation deadlines scheduled.</div>';
+  updateNotificationButton();
+}
+function updateNotificationButton(){
+  const b=$('notifyBtn'); if(!b)return;
+  if(!('Notification' in window)){b.textContent='Notifications unavailable';b.disabled=true;return}
+  if(Notification.permission==='granted')b.textContent='Notifications Enabled';
+  else if(Notification.permission==='denied')b.textContent='Notifications Blocked';
+  else b.textContent='Enable Notifications';
+}
+async function enableNotifications(){
+  if(!('Notification' in window)){alert('This browser does not support notifications. The Follow-up Reminder Center will still work inside UW Pro.');return}
+  try{
+    const p=await Notification.requestPermission();
+    updateNotificationButton();
+    if(p==='granted'){sendFollowupNotifications(true);alert('Follow-up notifications enabled.');}
+    else if(p==='denied')alert('Notifications are blocked in this browser. You can still use the reminder panel inside UW Pro.');
+  }catch(e){console.error(e);}
+}
+function sendFollowupNotifications(force){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const g=followupGroups(), d=deadlineGroups();
+  const key='uwpro_last_notified_'+today();
+  if(!force&&localStorage.getItem(key))return;
+  if(g.overdue.length||g.today.length||d.overdue.length||d.today.length){
+    const parts=[];
+    if(g.overdue.length)parts.push(g.overdue.length+' overdue follow-up'+(g.overdue.length===1?'':'s'));
+    if(g.today.length)parts.push(g.today.length+' follow-up'+(g.today.length===1?'':'s')+' due today');
+    if(d.overdue.length)parts.push(d.overdue.length+' overdue deadline'+(d.overdue.length===1?'':'s'));
+    if(d.today.length)parts.push(d.today.length+' deadline'+(d.today.length===1?'':'s')+' due today');
+    try{new Notification('UW Pro Follow-up Reminder',{body:parts.join(' · ')+' — open UW Pro to review.'});}catch(e){}
+    localStorage.setItem(key,'1');
+  }
+}
+
+let currentUser=null;
+let currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,export:true,claimsExport:true,edit:true,del:true};
+let isMainAdmin=false;
+
+async function login(){
+  const identifier=$('user').value.trim(), password=$('pass').value;
+  if(!identifier||!password){alert('Enter username/email and password.');return}
+  if(!CLOUD_ENABLED){alert('Cloud login is not configured.');return}
+  try{
+    // Main Admin has a fixed username/email mapping so login still works if the
+    // profile lookup is temporarily blocked by an RLS policy.
+    let profile=null, lookupError=null;
+    const lookup=identifier.includes('@')
+      ? await supa.from('uw_users').select('*').eq('email',identifier).maybeSingle()
+      : await supa.from('uw_users').select('*').eq('username',identifier).maybeSingle();
+    profile=lookup.data; lookupError=lookup.error;
+
+    const isKnownAdmin = identifier.toLowerCase()===MAIN_ADMIN_USERNAME || identifier.toLowerCase()===MAIN_ADMIN_EMAIL.toLowerCase();
+    const email = profile?.email || (isKnownAdmin ? MAIN_ADMIN_EMAIL : '');
+    if(!email){
+      if(lookupError) throw lookupError;
+      alert('Username or password wrong.');return;
+    }
+    if(profile?.active===false){alert('This user account is disabled.');return}
+
+    const {data:authData,error:authError}=await supa.auth.signInWithPassword({email,password});
+    if(authError) throw authError;
+    if(!authData.user){alert('Login failed.');return}
+
+    // If the Admin profile row was not readable, use the known Admin identity
+    // for the session; normal users still require their uw_users profile row.
+    if(!profile && isKnownAdmin){
+      profile={username:MAIN_ADMIN_USERNAME,email:MAIN_ADMIN_EMAIL,role:'Main Admin',active:true,permissions:DEFAULT_PERMS['Main Admin']};
+    }
+    if(!profile){await supa.auth.signOut();alert('User profile was not found. Please ask the Main Admin to check this user.');return}
+
+    currentUser=profile;
+    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(profile.permissions||{})};
+    isMainAdmin=profile.role==='Main Admin' || (profile.username===MAIN_ADMIN_USERNAME && profile.email===MAIN_ADMIN_EMAIL);
+    sessionStorage.uw=1; sessionStorage.userEmail=profile.email; sessionStorage.isAdmin=isMainAdmin?'1':'0';
+    $('login').classList.add('hidden'); $('who').textContent=profile.username;
+    applyPermissions();
+    showPage('mainPage',document.querySelector('.navBtn'));
+    await cloudLoad();
+    if(userCan('claims')) await loadClaims();
+  }catch(e){
+    console.error(e);
+    const em=String(e?.message||'');
+    const msg=em.toLowerCase().includes('email not confirmed')
+      ? 'Email is not confirmed yet. Confirm the user email in Supabase Auth, then try again.'
+      : (em.toLowerCase().includes('invalid login credentials') ? 'Username or password wrong.' : 'Login failed: '+em);
+    alert(msg);
+  }
+}
+
+async function forgotPassword(){
+  if(!CLOUD_ENABLED){alert('Password reset requires Supabase cloud login.');return}
+  let identifier=$('user').value.trim();if(!identifier){alert('Enter your username or email first.');return}
+  try{
+    let email=identifier;
+    if(!identifier.includes('@')){const {data,error}=await supa.from('uw_users').select('email').eq('username',identifier).maybeSingle();if(error)throw error;if(!data?.email){alert('Username not found.');return}email=data.email}
+    const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});if(error)throw error;
+    alert('Password reset link sent to the registered email address.');
+  }catch(e){alert('Could not send password reset: '+(e?.message||e))}
+}
+async function updatePasswordAfterRecovery(){
+  const p=prompt('Enter your new password (minimum 6 characters):');if(p===null)return;if(p.length<6){alert('Password must be at least 6 characters.');return}
+  const {error}=await supa.auth.updateUser({password:p});if(error){alert('Password update failed: '+error.message);return}
+  alert('Password updated successfully.');try{await supa.auth.signOut()}catch(e){}
+}
+if(CLOUD_ENABLED)supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(updatePasswordAfterRecovery,300)});
+
+async function logout(){
+  try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
+  sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');location.reload();
+}
+async function restoreSession(){
+  if(sessionStorage.uw!=='1')return;
+  if(!CLOUD_ENABLED){sessionStorage.clear();return}
+  const {data:sessionData}=await supa.auth.getSession();
+  if(!sessionData?.session){sessionStorage.clear();return}
+  const email=sessionData.session.user.email;
+  const {data:u}=await supa.from('uw_users').select('*').eq('email',email).maybeSingle();
+  if(!u||u.active===false){await supa.auth.signOut();sessionStorage.clear();return}
+  currentUser=u;currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
+  isMainAdmin=u.role==='Main Admin';$('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
+}
+function userCan(permission){return !!isMainAdmin || !!currentPerms[permission]}
+function applyPermissions(){
+  const map=[
+    ['navMain','main'],['navReports','reports'],['navRequests','requests'],['navFollowups','followups']
+  ];
+  map.forEach(([id,p])=>{const el=$(id);if(el)el.classList.toggle('hidden',!userCan(p))});
+  const usersNav=$('navUsers');if(usersNav)usersNav.classList.toggle('hidden',!isMainAdmin);
+  const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));
+  const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
+  const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!isMainAdmin);
+  const claimsNav=$('navClaims');if(claimsNav)claimsNav.classList.toggle('hidden',!userCan('claims'));
+  const claimExportBtn=$('claimExportBtn');if(claimExportBtn)claimExportBtn.classList.toggle('hidden',!userCan('claimsExport'));
+  const claimNewBtn=$('claimNewBtn');if(claimNewBtn)claimNewBtn.classList.toggle('hidden',!userCan('edit'));
+  const claimSaveBtn=$('saveClaimBtn');if(claimSaveBtn)claimSaveBtn.classList.toggle('hidden',!userCan('edit'));
+}
+restoreSession();
+
+const CLAIMS_KEY='uwpro_claims_v1'; let claims=[],editingClaim=null;
+function normalizeClaim(r){return {...r,request_date:normalizeDate(r.request_date),follow_up_date:normalizeDate(r.follow_up_date)}}
+async function loadClaims(){
+  if(!CLOUD_ENABLED){claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim);renderClaims();updateClaimSummary();return}
+  const {data:rows,error}=await supa.from('uw_claims').select('*').order('serial_no',{ascending:true});
+  if(error){console.error(error);claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim)}
+  else{claims=(rows||[]).map(normalizeClaim);localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims))}
+  renderClaims();updateClaimSummary();
+}
+function claimStatusBadge(s){return '<span class="claimStatus claim-'+String(s||'').toLowerCase().replace(/\s+/g,'-')+'">'+esc(s||'')+'</span>'}
+function claimPriorityBadge(p){return '<span class="claimStatus claim-'+String(p||'').toLowerCase()+'">'+esc(p||'')+'</span>'}
+function updateClaimSummary(){
+  $('claimTotal').textContent=claims.length;$('claimRequested').textContent=claims.filter(r=>r.status==='Requested').length;
+  $('claimAdditionInfo').textContent=claims.filter(r=>r.status==='Addition Info').length;$('claimPayment').textContent=claims.filter(r=>r.status==='Payment Under Process').length;
+}
+function renderClaims(){
+  const q=($('claimSearch')?.value||'').toLowerCase(),sf=$('claimStatusFilter')?.value||'',pf=$('claimPriorityFilter')?.value||'';
+  const rows=[...claims].sort((a,b)=>rank(a.priority)-rank(b.priority)||(Number(a.serial_no)||0)-(Number(b.serial_no)||0)).filter(r=>
+    (!q||[r.policy_number,r.claim_number,r.reference,r.tracking_reference,r.claim_type,r.agent_name,r.client_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf));
+  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.claim_type||'')+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No claims found.</td></tr>';
+}
+function newClaim(){
+  if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
+  showPage('claimsPage',$('navClaims'));editingClaim=null;$('claimEditorTitle').textContent='New Claim';
+  $('claimSerial').value=claims.reduce((m,r)=>Math.max(m,Number(r.serial_no)||0),0)+1;
+  ['claimPolicyNo','claimNo','claimReference','claimTrackingReference','claimType','claimAgent','claimClient','claimFollow','claimNotes'].forEach(id=>$(id).value='');
+  $('claimDate').value=today();$('claimStatus').value='Requested';$('claimPriority').value='Normal';$('claimEditor').classList.remove('hidden');
+  window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+function editClaim(serial){
+  const r=claims.find(x=>Number(x.serial_no)===Number(serial));if(!r)return;
+  if(!userCan('edit')){alert('You do not have permission to edit claims.');return}
+  editingClaim=serial;$('claimEditorTitle').textContent='Edit Claim #'+serial;
+  $('claimSerial').value=r.serial_no||'';$('claimPolicyNo').value=r.policy_number||'';$('claimNo').value=r.claim_number||'';$('claimReference').value=r.reference||'';$('claimTrackingReference').value=r.tracking_reference||'';$('claimType').value=r.claim_type||'';
+  $('claimAgent').value=r.agent_name||'';$('claimClient').value=r.client_name||'';$('claimDate').value=r.request_date||'';$('claimStatus').value=r.status||'Requested';
+  $('claimPriority').value=r.priority||'Normal';$('claimFollow').value=r.follow_up_date||'';$('claimNotes').value=r.notes||'';
+  $('claimEditor').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+function closeClaimEditor(){$('claimEditor').classList.add('hidden');editingClaim=null}
+async function saveClaim(){
+  if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
+  const r={serial_no:Number($('claimSerial').value),policy_number:$('claimPolicyNo').value.trim(),claim_number:$('claimNo').value.trim(),reference:$('claimReference').value.trim(),tracking_reference:$('claimTrackingReference').value.trim(),claim_type:$('claimType').value.trim(),agent_name:$('claimAgent').value.trim(),client_name:$('claimClient').value.trim(),request_date:dateOrNull($('claimDate').value),status:$('claimStatus').value,priority:$('claimPriority').value,notes:$('claimNotes').value.trim(),follow_up_date:dateOrNull($('claimFollow').value)};
+  if(!r.policy_number||!r.claim_number||!r.client_name||!r.request_date){alert('Please fill Policy Number, Claim Number, Client Name and Request Date.');return}
+  if(CLOUD_ENABLED){
+    const {data:sessionData}=await supa.auth.getSession();
+    if(!sessionData?.session){alert('Cloud save failed: No active Supabase login session. Please sign in again.');return}
+    const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'});
+    if(error){
+      console.error('UW Pro claim cloud save error:',error);
+      if(String(error.message||'').toLowerCase().includes('row-level security')) alert('Claim cloud save is blocked by Supabase RLS. Please run the supplied UW Pro RLS SQL in Supabase SQL Editor.');
+      else alert('Claim cloud save failed: '+error.message);
+      return;
+    }
+  }
+  const idx=claims.findIndex(x=>Number(x.serial_no)===Number(r.serial_no));if(idx>=0)claims[idx]=r;else claims.push(r);
+  localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
+  closeClaimEditor();renderClaims();updateClaimSummary();
+}
+async function exportClaimsExcel(){
+  if(!userCan('claimsExport')){alert('You do not have permission to export claims.');return}
+  if(!claims.length){alert('No claims to export.');return}
+  if(!window.ExcelJS){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)}).catch(()=>{})}
+  if(!window.ExcelJS){alert('Excel export library could not load.');return}
+  const wb=new ExcelJS.Workbook();wb.creator='UW Pro';const ws=wb.addWorksheet('Claims',{views:[{state:'frozen',ySplit:1}]});
+  const h=['S.No.','Policy Number','Claim Number','Reference','Tracking Reference','Type of Claim','Agent Name','Client Name','Request Date','Status','Priority','Notes','Follow-up Date'];ws.addRow(h);
+  claims.forEach((r,i)=>ws.addRow([i+1,r.policy_number,r.claim_number,r.reference,r.tracking_reference||'',r.claim_type||'',r.agent_name,r.client_name,r.request_date||'',r.status,r.priority,r.notes||'',r.follow_up_date||'']));
+  const border={top:{style:'thin',color:{argb:'B7C3D0'}},bottom:{style:'thin',color:{argb:'B7C3D0'}},left:{style:'thin',color:{argb:'B7C3D0'}},right:{style:'thin',color:{argb:'B7C3D0'}}};
+  ws.getRow(1).height=28;ws.getRow(1).eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'1F4E78'}};c.font={bold:true,color:{argb:'FFFFFF'}};c.alignment={horizontal:'center',vertical:'middle'};c.border=border});
+  [8,18,18,16,20,20,20,26,14,24,12,38,15].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  for(let i=2;i<=ws.rowCount;i++){const row=ws.getRow(i);row.eachCell((c,col)=>{c.border=border;c.alignment={vertical:'middle',wrapText:col===11}});
+    [9,13].forEach(c=>{if(row.getCell(c).value)row.getCell(c).numFmt='dd-mmm-yyyy'});
+    const sc={'Requested':'FFF2CC','Registered':'D9EAF7','Addition Info':'FCE4D6','Payment Under Process':'E2F0D9'},pc={'Urgent':'F4CCCC','High':'FCE4D6','Normal':'E7E6E6','Low':'F2F2F2'};
+    if(sc[row.getCell(10).value]){const c=row.getCell(10);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:sc[row.getCell(9).value]}};c.font={bold:true}}
+    if(pc[row.getCell(11).value]){const c=row.getCell(11);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:pc[row.getCell(10).value]}};c.font={bold:true}}
+  }
+  ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:h.length}};ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:'A4'};
+  const b=await wb.xlsx.writeBuffer(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([b],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='UW_Pro_General_Claims.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function badge(s){return '<span class="badge '+s.toLowerCase()+'">'+s+'</span>'}
+function pb(p){return '<span class="badge '+p.toLowerCase()+'">'+p+'</span>'}
+function rank(p){return ({Urgent:0,High:1,Normal:2,Low:3}[p]??4)}
+function monthKey(v){if(!v)return '';const m=String(v).slice(0,7);return /^\d{4}-\d{2}$/.test(m)?m:''}
+function monthLabel(v){const k=monthKey(v);if(!k)return '';const d=new Date(k+'-01T00:00:00');return d.toLocaleDateString('en-US',{month:'short',year:'numeric'})}
+function ageingDays(v){if(!v)return '';const a=new Date(v+'T00:00:00');const b=new Date(today()+'T00:00:00');return Math.max(0,Math.floor((b-a)/86400000))}
+function refreshMonthFilter(){const el=$('monthFilter');if(!el)return;const current=el.value;const keys=[...new Set(data.map(r=>monthKey(r.date)).filter(Boolean))].sort().reverse();el.innerHTML='<option value="">All Months</option>'+keys.map(k=>'<option value="'+k+'">'+monthLabel(k)+'</option>').join('');el.value=keys.includes(current)?current:''}
+function render(){
+ refreshMonthFilter();
+ let q=$('search').value.toLowerCase(),sf=$('statusFilter').value,pf=$('priorityFilter').value,bf=$('businessFilter').value,mf=$('monthFilter').value;
+ let rows=[...data].sort((a,b)=>rank(a.priority)-rank(b.priority)||b.ref-a.ref).filter(r=>
+ (!q||[r.ref,r.tracking_reference,r.client,r.agent,r.cover].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf)&&(!bf||r.business===bf)&&(!mf||monthKey(r.date)===mf));
+ $('rows').innerHTML=rows.length?rows.map(r=>'<tr><td>#'+r.ref+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+r.date+'</td><td>'+monthLabel(r.date)+'</td><td>'+esc(r.agent)+'</td><td>'+esc(r.client)+'</td><td>'+esc(r.phone||'')+'</td><td>'+r.business+'</td><td>'+esc(r.cover)+'</td><td>'+formatMoney(r.sumInsured)+'</td><td>'+pb(r.priority)+'</td><td>'+badge(r.status)+'</td><td>'+r.follow+'</td><td><button class="secondary" onclick="edit('+r.ref+')">Edit</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No requests found.</td></tr>';
+ $('total').textContent=data.length;$('quoted').textContent=data.filter(r=>r.status==='Quoted').length;$('confirmed').textContent=data.filter(r=>r.status==='Confirmed').length;
+ $('due').textContent=data.filter(r=>r.follow&&r.follow<=today()&&!['Issued','Declined'].includes(r.status)).length;
+ $('overdue').textContent=data.filter(r=>r.quoteDeadline&&r.quoteDeadline<today()&&!['Issued','Declined'].includes(r.status)).length;
+ $('pu').textContent=data.filter(r=>r.priority==='Urgent').length;$('ph').textContent=data.filter(r=>r.priority==='High').length;$('pn').textContent=data.filter(r=>r.priority==='Normal').length;$('pl').textContent=data.filter(r=>r.priority==='Low').length;
+}
+function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function numOrNull(v){const t=String(v??'').trim();return t===''?null:Number(t)}
+function dateOrNull(v){const t=String(v??'').trim();return t===''?null:t}
+function newRequest(){showPage('mainPage',document.querySelector('.navBtn'));editing=null;$('editorTitle').textContent='New Request';clearForm();$('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);$('date').value=today();$('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
+function clearForm(){['agent','client','phone','email','trackingReference','cover','sumInsured','follow','members','expiry','prevPremium','quotePremium','prevInsurer','prevPolicy','policyType','quoteDeadline','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
+function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
+async function save(){
+let r={
+ref:Number($('ref').value),tracking_reference:$('trackingReference').value.trim(),date:$('date').value,agent:$('agent').value,client:$('client').value,
+phone:$('phone').value,email:$('email').value,business:$('business').value,cover:$('cover').value,
+sumInsured:numOrNull($('sumInsured').value),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),
+members:numOrNull($('members').value),expiry:dateOrNull($('expiry').value),prevPremium:numOrNull($('prevPremium').value),quotePremium:numOrNull($('quotePremium').value),
+prevInsurer:$('prevInsurer').value,prevPolicy:$('prevPolicy').value,policyType:$('policyType').value,
+quoteDeadline:dateOrNull($('quoteDeadline').value),remarks:$('remarks').value
+};
+if(!r.client||!r.agent||!r.date){alert('Please fill Date, Agent and Client.');return}
+if(CLOUD_ENABLED){const ok=await cloudUpsert(r);if(!ok)return}
+if(editing){data[data.findIndex(x=>x.ref===editing)]=r}else{
+  if(data.some(x=>Number(x.ref)===Number(r.ref))){data=data.map(x=>Number(x.ref)===Number(r.ref)?r:x)}else data.push(r)
+}
+localStorage.setItem(KEY,JSON.stringify(data));
+closeEditor();updateReports();updateFollowups()
+}
+function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
+function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+async function clearAllData(){
+if(!isMainAdmin){alert('Main Admin access only.');return}
+if(!data.length){alert('There is no saved data to clear.');return}
+if(confirm('Delete all saved underwriting requests? This cannot be undone.')){
+  if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
+  data=[];claims=[];localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);render();renderClaims();updateReports();updateFollowups();updateClaimSummary()
+}}
+async function exportExcel(){
+  if(!data.length){alert('No requests to export.');return}
+  if(!window.ExcelJS){
+    await new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+      s.onload=resolve;s.onerror=reject;document.head.appendChild(s);
+    }).catch(()=>{});
+  }
+  if(!window.ExcelJS){alert('Excel export library could not load. Please check your internet connection and try again.');return}
+
+  const headers=['S.No.','Reference No.','Tracking Reference','Request Date','Month','Ageing (Days)','Agent / Broker','Client / Insured','Phone','Email','Business Type','Cover Type','Sum Insured','Priority','Status','Follow-up Date','Members','Policy Expiry','Previous Premium','Quoted Premium','Previous Insurer','Previous Policy No.','Policy / Risk Type','Quotation Deadline','Remarks'];
+  const body=data.map((r,i)=>[
+    i+1,r.ref,r.tracking_reference||'',r.date,monthLabel(r.date),ageingDays(r.date),r.agent,r.client,r.phone||'',r.email||'',r.business,r.cover,r.sumInsured==null?'':r.sumInsured,r.priority,r.status,r.follow||'',r.members==null?'':r.members,r.expiry||'',r.prevPremium==null?'':r.prevPremium,r.quotePremium==null?'':r.quotePremium,r.prevInsurer,r.prevPolicy,r.policyType,r.quoteDeadline||'',r.remarks||''
+  ]);
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator='UW Pro';
+  wb.created=new Date();
+  wb.modified=new Date();
+  const ws=wb.addWorksheet('Underwriting',{
+    views:[{state:'frozen',ySplit:1}]
+  });
+
+  ws.addRow(headers);
+  body.forEach(row=>ws.addRow(row));
+
+  const headerFill='1F4E78';
+  const headerFont='FFFFFF';
+  const borderColor='B7C3D0';
+  const thinBorder={top:{style:'thin',color:{argb:borderColor}},bottom:{style:'thin',color:{argb:borderColor}},left:{style:'thin',color:{argb:borderColor}},right:{style:'thin',color:{argb:borderColor}}};
+
+  ws.getRow(1).height=28;
+  ws.getRow(1).eachCell(cell=>{
+    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:headerFill}};
+    cell.font={bold:true,color:{argb:headerFont},size:11};
+    cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    cell.border=thinBorder;
+  });
+
+  const widths=[8,14,18,14,14,13,20,26,17,28,20,22,16,12,13,15,10,15,16,16,20,22,18,20,35];
+  widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+
+  for(let r=2;r<=ws.rowCount;r++){
+    const row=ws.getRow(r);
+    row.height=22;
+    row.eachCell((cell,col)=>{
+      cell.border=thinBorder;
+      cell.alignment={vertical:'middle',wrapText:col===25};
+    });
+    [13,19,20].forEach(col=>{ row.getCell(col).numFmt='#,##0.00'; });
+    [4,16,18,24].forEach(col=>{ if(row.getCell(col).value) row.getCell(col).numFmt='dd-mmm-yyyy'; });
+
+    const status=String(row.getCell(15).value||'');
+    const priority=String(row.getCell(14).value||'');
+    const statusColors={
+      Pending:'FFF2CC',
+      Quoted:'FFF2CC',
+      Confirmed:'D9EAF7',
+      Issued:'E2F0D9',
+      Declined:'F4CCCC'
+    };
+    const priorityColors={
+      Urgent:'F4CCCC',
+      High:'FCE4D6',
+      Normal:'E7E6E6',
+      Low:'F2F2F2'
+    };
+    if(statusColors[status]){
+      const cell=row.getCell(15);
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:statusColors[status]}};
+      cell.font={bold:true};
+      cell.alignment={horizontal:'center',vertical:'middle'};
+    }
+    if(priorityColors[priority]){
+      const cell=row.getCell(14);
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:priorityColors[priority]}};
+      cell.font={bold:true};
+      cell.alignment={horizontal:'center',vertical:'middle'};
+    }
+  }
+
+  ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:headers.length}};
+  ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:'A4'};
+  ws.pageMargins={left:0.25,right:0.25,top:0.5,bottom:0.5,header:0.2,footer:0.2};
+  ws.headerFooter.oddFooter='Page &P of &N';
+
+  const report=wb.addWorksheet('Monthly Summary');
+  report.getColumn(1).width=18; report.getColumn(2).width=18; report.getColumn(3).width=18;
+  report.addRow(['Month','Requests','Quoted Premium']);
+  const months={};
+  data.forEach(r=>{const m=monthLabel(r.date)||'Unknown'; if(!months[m])months[m]={count:0,premium:0}; months[m].count++; months[m].premium+=Number(r.quotePremium)||0;});
+  Object.keys(months).sort((a,b)=>a.localeCompare(b)).forEach(m=>report.addRow([m,months[m].count,months[m].premium]));
+  report.getRow(1).height=26;
+  report.getRow(1).eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:headerFill}};cell.font={bold:true,color:{argb:headerFont}};cell.alignment={horizontal:'center'};cell.border=thinBorder;});
+  for(let r=2;r<=report.rowCount;r++){report.getRow(r).eachCell(c=>c.border=thinBorder);report.getCell(r,3).numFmt='#,##0.00';}
+  report.autoFilter={from:{row:1,column:1},to:{row:report.rowCount,column:3}};
+  report.views=[{state:'frozen',ySplit:1}];
+
+  const buffer=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='UW_Pro_Underwriting_Report.xlsx';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+['pMain','pReports','pRequests','pFollow','pClaims','pClaimsExport','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
+render();
+updateReports();
+updateFollowups();
+if(CLOUD_ENABLED) cloudLoad(); else setSyncStatus('Local only');
+setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
+setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();},60000);
+</script>
+</body></html>
