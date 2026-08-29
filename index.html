@@ -384,9 +384,7 @@ async function saveUser(){
    console.error(e);
    const msg=e?.message||e||'Unknown error';
    if(/email limit exceeded/i.test(msg)){
-     alert('User save failed: Supabase email sending limit has been reached.
-
-For UW Pro internal user creation, disable Email Confirmations in Supabase Auth settings so creating users does not send a confirmation email. Forgot Password will still use email when requested.');
+     alert('User save failed: Supabase email sending limit has been reached.\n\nFor UW Pro internal user creation, disable Email Confirmations in Supabase Auth settings so creating users does not send a confirmation email. Forgot Password will still use email when requested.');
    }else if(/rate limit|too many requests/i.test(msg)){
      alert('User save failed: Supabase Auth rate limit reached. Please wait and try again.');
    }else{
