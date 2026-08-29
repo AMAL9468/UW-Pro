@@ -76,7 +76,6 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   <div class="sideBrand">UW Pro<span>Underwriting Workflow</span></div>
   <button id="navMain" class="navBtn active" onclick="showPage('mainPage',this)">Main</button>
   <button id="navReports" class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
-  <button id="navRequests" class="navBtn" onclick="openRequestsFromNav(this)">Requests</button>
   <button id="navFollowups" class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
   <button id="navClaims" class="navBtn" onclick="showPage('claimsPage',this)">Claims</button>
   <button id="navUsers" class="navBtn" onclick="showPage('usersPage',this)">Users</button>
@@ -91,33 +90,33 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <main class="wrap">
 <div id="mainPage" class="page active">
 <div id="dashboard">
-<div class="grid">
-<div class="card"><div class="muted">Total Requests</div><div class="num" id="total">0</div></div>
-<div class="card"><div class="muted">Quoted</div><div class="num" id="quoted">0</div></div>
-<div class="card"><div class="muted">Confirmed</div><div class="num" id="confirmed">0</div></div>
-<div class="card"><div class="muted">Follow-ups Due</div><div class="num" id="due">0</div></div><div class="card"><div class="muted">Overdue Open</div><div class="num" id="overdue">0</div></div>
-</div>
-<div class="smallCard" style="margin-top:14px">
-  <div class="sectionTitle">System Status</div>
-  <span class="statusDot"></span><span class="muted">Cloud database ready</span>
-  <span class="muted" style="margin-left:18px">Changes are synced across devices when Supabase is configured.</span>
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div>
+      <h2 class="sectionTitle" style="margin-bottom:4px">Underwriting Requests</h2>
+      <div class="muted">Create a new request or view all shared request details below.</div>
+    </div>
+    <button class="primary" onclick="newRequest()">+ New Request</button>
+  </div>
 </div>
 
 <div class="toolbar">
 <input id="search" placeholder="Search client, reference, agent..." oninput="render()">
 <select id="statusFilter" onchange="render()"><option value="">All Status</option><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select>
 <select id="priorityFilter" onchange="render()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
-<select id="businessFilter" onchange="render()"><option value="">All Business</option><option>Group Medical</option><option>General Non-Motor</option></select><select id="monthFilter" onchange="render()"><option value="">All Months</option></select>
-<button class="primary" onclick="newRequest()">+ New Request</button>
+<select id="businessFilter" onchange="render()"><option value="">All Business</option><option>Group Medical</option><option>General Non-Motor</option></select>
+<select id="monthFilter" onchange="render()"><option value="">All Months</option></select>
 <button id="exportBtn" class="secondary" onclick="exportExcel()">Export Excel</button><button id="clearAllBtn" class="secondary" onclick="clearAllData()">Clear All Data</button>
 </div>
 
-<div class="card" style="margin-bottom:14px"><b>Priority Work Plan</b>
-<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px">
-<span class="badge urgent">Urgent <b id="pu">0</b></span><span class="badge high">High <b id="ph">0</b></span><span class="badge normal">Normal <b id="pn">0</b></span><span class="badge low">Low <b id="pl">0</b></span>
-</div></div>
+<div class="card" style="margin-bottom:14px">
+  <div class="sectionTitle">Request Details</div>
+  <div class="muted">Shared cloud records created by any authorised user are shown here.</div>
+</div>
 
-<div class="tableWrap"><table><thead><tr><th>Ref</th><th>Tracking Reference</th><th>Date</th><th>Month</th><th>Agent</th><th>Client</th><th>Contact</th><th>Business</th><th>Cover</th><th>Sum Insured</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="tableWrap"><table style="min-width:1900px"><thead><tr>
+<th>Ref</th><th>Tracking Reference</th><th>Date</th><th>Month</th><th>Agent / Broker</th><th>Client / Insured</th><th>Phone</th><th>Email</th><th>Business</th><th>Cover</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Members</th><th>Policy Expiry</th><th>Previous Premium</th><th>Quoted Premium</th><th>Previous Insurer</th><th>Remarks</th><th>Action</th>
+</tr></thead><tbody id="rows"></tbody></table></div>
 </div>
 </div>
 
@@ -142,9 +141,6 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   </div>
 </div>
 
-<div id="requestsPage" class="page">
-  <div class="card"><h2 class="sectionTitle">Requests</h2><div class="muted">Use Main for the dashboard and filters, or create a new request below.</div><div class="actions"><button class="primary" onclick="newRequest()">+ New Request</button><button class="secondary" onclick="showPage('mainPage',document.querySelector('.navBtn'))">Open Main Dashboard</button></div></div>
-</div>
 
 <div id="followupsPage" class="page">
   <div class="card" style="margin-bottom:14px">
@@ -217,10 +213,28 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 </div>
 
 <div id="settingsPage" class="page">
+  <div class="card" style="margin-bottom:14px">
+    <h2 class="sectionTitle">My Profile</h2>
+    <div class="grid" style="grid-template-columns:repeat(2,1fr);margin-top:14px">
+      <div class="smallCard"><div class="muted">Username</div><div class="num" style="font-size:18px" id="profileUsername">—</div></div>
+      <div class="smallCard"><div class="muted">Email</div><div style="font-weight:700;margin-top:6px" id="profileEmail">—</div></div>
+      <div class="smallCard"><div class="muted">Role</div><div style="font-weight:700;margin-top:6px" id="profileRole">—</div></div>
+      <div class="smallCard"><div class="muted">Account Status</div><div style="font-weight:700;margin-top:6px" id="profileStatus">—</div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <h2 class="sectionTitle">Main Admin Details</h2>
+    <div class="grid" style="grid-template-columns:repeat(2,1fr);margin-top:14px">
+      <div class="smallCard"><div class="muted">Admin Username</div><div style="font-weight:700;margin-top:6px">admin</div></div>
+      <div class="smallCard"><div class="muted">Admin Email</div><div style="font-weight:700;margin-top:6px">amalkrishnakk73@gmail.com</div></div>
+      <div class="smallCard"><div class="muted">Admin Role</div><div style="font-weight:700;margin-top:6px">Main Admin</div></div>
+      <div class="smallCard"><div class="muted">Cloud Database</div><div style="font-weight:700;margin-top:6px" id="settingsSync">Not configured</div></div>
+    </div>
+  </div>
   <div class="card">
-    <h2 class="sectionTitle">System Settings</h2>
-    <p class="muted">Cloud database status: <b id="settingsSync">Not configured</b></p>
-    <p class="muted">Supabase cloud sync is configured for this project. Make sure the UW Pro SQL schema has been run in Supabase before saving data. Tracking Reference is included for Claims and all underwriting requests (Medical / General).</p>
+    <h2 class="sectionTitle">System Information</h2>
+    <p class="muted">Requests and Claims are shared across authorised users through Supabase cloud sync.</p>
+    <p class="muted">Tracking Reference is included for Claims and all underwriting requests (Medical / General).</p>
   </div>
 </div>
 
@@ -393,9 +407,21 @@ async function saveUser(){
 
 function openRequestsFromNav(btn){
   if(!userCan('requests')){alert('You do not have permission to open this section.');return}
-  newRequest();
+  // Open the request editor directly. The editor is outside the page containers,
+  // so navigating to mainPage first can otherwise hide/reset it.
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  $('mainPage').classList.add('active');
   document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  editing=null;
+  $('editorTitle').textContent='New Request';
+  clearForm();
+  $('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);
+  $('date').value=today();
+  $('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);
+  $('dashboard').classList.add('hidden');
+  $('editor').classList.remove('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function showPage(id,btn){
@@ -418,6 +444,7 @@ function showPage(id,btn){
   if(id==='followupsPage')updateFollowups();
   if(id==='claimsPage')loadClaims();
   if(id==='usersPage')loadUsers();
+  if(id==='settingsPage')renderProfileDetails();
 }
 function updateReports(){
   const total=data.length, open=data.filter(r=>!['Issued','Declined'].includes(r.status)).length;
@@ -550,6 +577,7 @@ async function login(){
     if(!profile){await supa.auth.signOut();alert('User profile was not found. Please ask the Main Admin to check this user.');return}
 
     currentUser=profile;
+    renderProfileDetails();
     currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(profile.permissions||{})};
     isMainAdmin=profile.role==='Main Admin' || (profile.username===MAIN_ADMIN_USERNAME && profile.email===MAIN_ADMIN_EMAIL);
     sessionStorage.uw=1; sessionStorage.userEmail=profile.email; sessionStorage.isAdmin=isMainAdmin?'1':'0'; localStorage.setItem('uwpro_current_user',JSON.stringify(profile));
@@ -635,6 +663,7 @@ async function restoreSession(){
     }
     if(u.active===false){await supa.auth.signOut();sessionStorage.clear();localStorage.removeItem('uwpro_current_user');return}
     currentUser=u;
+    renderProfileDetails();
     currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
     isMainAdmin=u.role==='Main Admin' || (u.username===MAIN_ADMIN_USERNAME && u.email===MAIN_ADMIN_EMAIL);
     sessionStorage.uw=1;sessionStorage.userEmail=u.email;sessionStorage.isAdmin=isMainAdmin?'1':'0';
@@ -651,9 +680,16 @@ async function restoreSession(){
   }
 }
 function userCan(permission){return !!isMainAdmin || !!currentPerms[permission]}
+function renderProfileDetails(){
+  const u=currentUser||{};
+  if($('profileUsername'))$('profileUsername').textContent=u.username||'—';
+  if($('profileEmail'))$('profileEmail').textContent=u.email||'—';
+  if($('profileRole'))$('profileRole').textContent=u.role||'—';
+  if($('profileStatus'))$('profileStatus').textContent=u.active===false?'Disabled':'Active';
+}
 function applyPermissions(){
   const map=[
-    ['navMain','main'],['navReports','reports'],['navRequests','requests'],['navFollowups','followups']
+    ['navMain','main'],['navReports','reports'],['navFollowups','followups']
   ];
   map.forEach(([id,p])=>{const el=$(id);if(el)el.classList.toggle('hidden',!userCan(p))});
   const usersNav=$('navUsers');if(usersNav)usersNav.classList.toggle('hidden',!isMainAdmin);
@@ -689,7 +725,7 @@ function renderClaims(){
   const q=($('claimSearch')?.value||'').toLowerCase(),sf=$('claimStatusFilter')?.value||'',pf=$('claimPriorityFilter')?.value||'';
   const rows=[...claims].sort((a,b)=>rank(a.priority)-rank(b.priority)||(Number(a.serial_no)||0)-(Number(b.serial_no)||0)).filter(r=>
     (!q||[r.policy_number,r.claim_number,r.reference,r.tracking_reference,r.claim_type,r.agent_name,r.client_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf));
-  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.claim_type||'')+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No claims found.</td></tr>';
+  $('claimRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.serial_no)+'</td><td>'+esc(r.policy_number)+'</td><td>'+esc(r.claim_number)+'</td><td>'+esc(r.reference)+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.claim_type||'')+'</td><td>'+esc(r.agent_name)+'</td><td>'+esc(r.client_name)+'</td><td>'+esc(r.request_date||'')+'</td><td>'+claimStatusBadge(r.status)+'</td><td>'+claimPriorityBadge(r.priority)+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td>'+esc(r.follow_up_date||'')+'</td><td><button class="secondary" onclick="editClaim('+Number(r.serial_no)+')">Edit</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteClaim('+Number(r.serial_no)+')">Delete</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No claims found.</td></tr>';
 }
 function newClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
@@ -709,6 +745,22 @@ function editClaim(serial){
   $('claimEditor').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
 }
 function closeClaimEditor(){$('claimEditor').classList.add('hidden');editingClaim=null}
+
+async function deleteClaim(serial){
+  if(!userCan('del')){alert('You do not have permission to delete claims.');return}
+  const r=claims.find(x=>Number(x.serial_no)===Number(serial));
+  if(!r){alert('Claim not found.');return}
+  if(!confirm('Delete Claim #'+serial+'? This will remove the shared claim for every user.'))return;
+  if(CLOUD_ENABLED){
+    const {error}=await supa.from('uw_claims').delete().eq('serial_no',serial);
+    if(error){alert('Claim delete failed: '+error.message);return}
+  }
+  claims=claims.filter(x=>Number(x.serial_no)!==Number(serial));
+  localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
+  if(Number(editingClaim)===Number(serial))closeClaimEditor();
+  renderClaims();updateClaimSummary();
+}
+
 async function saveClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
   const r={serial_no:Number($('claimSerial').value),policy_number:$('claimPolicyNo').value.trim(),claim_number:$('claimNo').value.trim(),reference:$('claimReference').value.trim(),tracking_reference:$('claimTrackingReference').value.trim(),claim_type:$('claimType').value.trim(),agent_name:$('claimAgent').value.trim(),client_name:$('claimClient').value.trim(),request_date:dateOrNull($('claimDate').value),status:$('claimStatus').value,priority:$('claimPriority').value,notes:$('claimNotes').value.trim(),follow_up_date:dateOrNull($('claimFollow').value)};
@@ -748,20 +800,56 @@ function ageingDays(v){if(!v)return '';const a=new Date(v+'T00:00:00');const b=n
 function refreshMonthFilter(){const el=$('monthFilter');if(!el)return;const current=el.value;const keys=[...new Set(data.map(r=>monthKey(r.date)).filter(Boolean))].sort().reverse();el.innerHTML='<option value="">All Months</option>'+keys.map(k=>'<option value="'+k+'">'+monthLabel(k)+'</option>').join('');el.value=keys.includes(current)?current:''}
 function render(){
  refreshMonthFilter();
- let q=$('search').value.toLowerCase(),sf=$('statusFilter').value,pf=$('priorityFilter').value,bf=$('businessFilter').value,mf=$('monthFilter').value;
- let rows=[...data].sort((a,b)=>rank(a.priority)-rank(b.priority)||b.ref-a.ref).filter(r=>
- (!q||[r.ref,r.tracking_reference,r.client,r.agent,r.cover].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf)&&(!bf||r.business===bf)&&(!mf||monthKey(r.date)===mf));
- $('rows').innerHTML=rows.length?rows.map(r=>'<tr><td>#'+r.ref+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+r.date+'</td><td>'+monthLabel(r.date)+'</td><td>'+esc(r.agent)+'</td><td>'+esc(r.client)+'</td><td>'+esc(r.phone||'')+'</td><td>'+r.business+'</td><td>'+esc(r.cover)+'</td><td>'+formatMoney(r.sumInsured)+'</td><td>'+pb(r.priority)+'</td><td>'+badge(r.status)+'</td><td>'+r.follow+'</td><td><button class="secondary" onclick="edit('+r.ref+')">Edit</button></td></tr>').join(''):'<tr><td colspan="14" style="text-align:center;padding:25px">No requests found.</td></tr>';
- $('total').textContent=data.length;$('quoted').textContent=data.filter(r=>r.status==='Quoted').length;$('confirmed').textContent=data.filter(r=>r.status==='Confirmed').length;
- $('due').textContent=data.filter(r=>r.follow&&r.follow<=today()&&!['Issued','Declined'].includes(r.status)).length;
- $('overdue').textContent=data.filter(r=>r.quoteDeadline&&r.quoteDeadline<today()&&!['Issued','Declined'].includes(r.status)).length;
- $('pu').textContent=data.filter(r=>r.priority==='Urgent').length;$('ph').textContent=data.filter(r=>r.priority==='High').length;$('pn').textContent=data.filter(r=>r.priority==='Normal').length;$('pl').textContent=data.filter(r=>r.priority==='Low').length;
+ let q=($('search')?.value||'').toLowerCase(),sf=$('statusFilter')?.value||'',pf=$('priorityFilter')?.value||'',bf=$('businessFilter')?.value||'',mf=$('monthFilter')?.value||'';
+ let rows=[...data].sort((a,b)=>rank(a.priority)-rank(b.priority)||Number(b.ref||0)-Number(a.ref||0)).filter(r=>
+ (!q||[r.ref,r.tracking_reference,r.client,r.agent,r.cover,r.phone,r.email,r.business,r.prevInsurer,r.remarks].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf)&&(!pf||r.priority===pf)&&(!bf||r.business===bf)&&(!mf||monthKey(r.date)===mf));
+ $('rows').innerHTML=rows.length?rows.map(r=>'<tr>'+
+ '<td>#'+esc(r.ref)+'</td>'+
+ '<td>'+esc(r.tracking_reference||'')+'</td>'+
+ '<td>'+esc(r.date||'')+'</td>'+
+ '<td>'+esc(monthLabel(r.date))+'</td>'+
+ '<td>'+esc(r.agent||'')+'</td>'+
+ '<td>'+esc(r.client||'')+'</td>'+
+ '<td>'+esc(r.phone||'')+'</td>'+
+ '<td>'+esc(r.email||'')+'</td>'+
+ '<td>'+esc(r.business||'')+'</td>'+
+ '<td>'+esc(r.cover||'')+'</td>'+
+ '<td>'+pb(r.priority)+'</td>'+
+ '<td>'+badge(r.status)+'</td>'+
+ '<td>'+esc(r.follow||'')+'</td>'+
+ '<td>'+esc(r.members??'')+'</td>'+
+ '<td>'+esc(r.expiry||'')+'</td>'+
+ '<td>'+formatMoney(r.prevPremium)+'</td>'+
+ '<td>'+formatMoney(r.quotePremium)+'</td>'+
+ '<td>'+esc(r.prevInsurer||'')+'</td>'+
+ '<td style="white-space:normal;min-width:240px">'+esc(r.remarks||'')+'</td>'+
+ '<td><button class="secondary" onclick="edit('+Number(r.ref)+')">Edit</button></td>'+
+ '</tr>').join(''):'<tr><td colspan="20" style="text-align:center;padding:25px">No requests found.</td></tr>';
 }
+
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function numOrNull(v){const t=String(v??'').trim();return t===''?null:Number(t)}
 function dateOrNull(v){const t=String(v??'').trim();return t===''?null:t}
-function newRequest(){showPage('mainPage',document.querySelector('.navBtn'));editing=null;$('editorTitle').textContent='New Request';clearForm();$('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);$('date').value=today();$('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
-function clearForm(){['agent','client','phone','email','trackingReference','cover','sumInsured','follow','members','expiry','prevPremium','quotePremium','prevInsurer','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
+function newRequest(){
+  // Main-page New Request button: do not route through showPage(), because
+  // the editor lives outside the page container and navigation can hide it.
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  const main=$('mainPage'); if(main) main.classList.add('active');
+  document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
+  const nav=$('navMain'); if(nav) nav.classList.add('active');
+  const editor=$('editor'), dashboard=$('dashboard');
+  if(!editor) return;
+  editing=null;
+  $('editorTitle').textContent='New Request';
+  clearForm();
+  $('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);
+  $('date').value=today();
+  $('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);
+  if(dashboard) dashboard.classList.add('hidden');
+  editor.classList.remove('hidden');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function clearForm(){['agent','client','phone','email','trackingReference','cover','follow','members','expiry','prevPremium','quotePremium','prevInsurer','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
 function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
 async function save(){
 let r={
