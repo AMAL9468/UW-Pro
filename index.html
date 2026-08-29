@@ -21,7 +21,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 
 .brandMark{width:48px;height:48px;border-radius:12px;background:#1f4e78;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;margin-bottom:12px}
 .loginBox h1{margin:0 0 4px}.loginLabel{display:block;font-size:12px;font-weight:700;color:#475569;margin-top:9px}
-.loginHint{text-align:center;color:#94a3b8;font-size:12px;margin:14px 0 0}
+.loginHint{text-align:center;color:#94a3b8;font-size:12px;margin:14px 0 0}.forgotLink{display:block;width:100%;margin-top:12px!important;background:transparent!important;color:#1f4e78!important;border:1px solid #cbd5e1!important;padding:10px 12px!important;font-size:13px!important}.forgotLink:hover{background:#f1f5f9!important}
 .headerActions{display:flex;align-items:center;gap:10px}
 .statusDot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:5px}
 .smallCard{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
@@ -68,7 +68,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <label class="loginLabel">Password</label>
 <input id="pass" type="password" placeholder="Enter password" autocomplete="current-password">
 <button onclick="login()">Sign in</button>
-<p style="text-align:center;margin:12px 0 0"><button class="secondary" style="width:auto;background:transparent" onclick="forgotPassword()">Forgot password?</button></p>
+<button type="button" class="forgotLink" onclick="forgotPassword()">Forgot password?</button><p class="loginHint">Enter your username or registered email, then use this option to receive a password reset link.</p>
 <p class="loginHint">Authorized users only</p>
 </div></div>
 
@@ -307,7 +307,7 @@ async function loadUsers(){
  if(!CLOUD_ENABLED){$('userRows').innerHTML='<tr><td colspan="8">Supabase cloud is not configured.</td></tr>';return}
  const {data:rows,error}=await supa.from('uw_users').select('*').order('username');
  if(error){$('userRows').innerHTML='<tr><td colspan="8">Create the uw_users table using the supplied SQL first.</td></tr>';return}
- $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.claims&&'Claims',p.claimsExport&&'Claims Excel',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td style="white-space:nowrap"><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteUser(\''+u.id+'\')">Delete</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
+ $('userRows').innerHTML=(rows||[]).map(u=>{const p=u.permissions||{};const pills=[p.main&&'Main',p.reports&&'Reports',p.requests&&'Requests',p.followups&&'Follow-ups',p.claims&&'Claims',p.claimsExport&&'Claims Excel',p.export&&'Excel',p.edit&&'Edit',p.del&&'Delete'].filter(Boolean).map(x=>'<span class="permissionPill">'+x+'</span>').join('');return '<tr class="'+(u.active===false?'disabledRow':'')+'"><td><b>'+esc(u.username)+'</b><br><span class="muted">'+esc(u.email||'')+'</span></td><td>'+esc(u.role)+'</td><td colspan="4">'+pills+'</td><td>'+((u.active===false)?'Disabled':'Active')+'</td><td style="white-space:nowrap"><button class="secondary" onclick=\'openUserForm('+JSON.stringify(u)+')\'>Edit</button> <button class="secondary" onclick="adminResetPassword(\''+u.email+'\')">Reset Password</button> <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteUser(\''+u.id+'\')">Delete</button></td></tr>'}).join('')||'<tr><td colspan="8">No users yet.</td></tr>';
 }
 async function deleteUser(userId){
  if(!isMainAdmin){alert('Main Admin access only.');return}
@@ -326,6 +326,18 @@ async function deleteUser(userId){
    alert('User delete failed: '+(e?.message||e));
  }
 }
+async function adminResetPassword(email){
+ if(!isMainAdmin){alert('Main Admin access only.');return}
+ if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
+ email=String(email||'').trim();if(!email){alert('This user does not have a registered email address.');return}
+ if(!confirm('Send a password reset link to '+email+'?'))return;
+ try{
+   const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});
+   if(error)throw error;
+   alert('Password reset link sent to '+email+'. The user can set a new password from that link.');
+ }catch(e){alert('Could not send password reset: '+(e?.message||e))}
+}
+
 async function saveUser(){
  const username=$('uName').value.trim(),email=$('uEmail').value.trim(),password=$('uPass').value,role=$('uRole').value;
  if(!username||!email){alert('Username and email are required.');return}
@@ -367,8 +379,16 @@ function showPage(id,btn){
   if(required[id]&&!userCan(required[id])){alert('You do not have permission to open this section.');return}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   const p=$(id);if(p)p.classList.add('active');
+  // The request editor and user form live outside the page containers.
+  // Always close them when navigating so they cannot appear at the bottom of another page.
+  if(id!=='mainPage'){
+    const ed=$('editor');if(ed)ed.classList.add('hidden');
+    const dash=$('dashboard');if(dash)dash.classList.remove('hidden');
+    const uf=$('userForm');if(uf)uf.classList.add('hidden');
+  }
   document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  window.scrollTo({top:0,behavior:'instant'});
   if(id==='reportsPage')updateReports();
   if(id==='followupsPage')updateFollowups();
   if(id==='claimsPage')loadClaims();
@@ -559,7 +579,7 @@ function applyPermissions(){
   const usersNav=$('navUsers');if(usersNav)usersNav.classList.toggle('hidden',!isMainAdmin);
   const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));
   const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
-  const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!userCan('del'));
+  const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!isMainAdmin);
   const claimsNav=$('navClaims');if(claimsNav)claimsNav.classList.toggle('hidden',!userCan('claims'));
   const claimExportBtn=$('claimExportBtn');if(claimExportBtn)claimExportBtn.classList.toggle('hidden',!userCan('claimsExport'));
   const claimNewBtn=$('claimNewBtn');if(claimNewBtn)claimNewBtn.classList.toggle('hidden',!userCan('edit'));
@@ -678,6 +698,7 @@ closeEditor();updateReports();updateFollowups()
 function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
 function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 async function clearAllData(){
+if(!isMainAdmin){alert('Main Admin access only.');return}
 if(!data.length){alert('There is no saved data to clear.');return}
 if(confirm('Delete all saved underwriting requests? This cannot be undone.')){
   if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
