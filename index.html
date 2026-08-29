@@ -823,7 +823,7 @@ function render(){
  '<td>'+formatMoney(r.quotePremium)+'</td>'+
  '<td>'+esc(r.prevInsurer||'')+'</td>'+
  '<td style="white-space:normal;min-width:240px">'+esc(r.remarks||'')+'</td>'+
- '<td><button class="secondary" onclick="edit('+Number(r.ref)+')">Edit</button></td>'+
+ '<td style="white-space:nowrap"><button class="secondary" onclick="edit('+Number(r.ref)+')">Edit</button>'+(userCan('del')?' <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteRequest('+Number(r.ref)+')">Delete</button>':'')+'</td>'+
  '</tr>').join(''):'<tr><td colspan="20" style="text-align:center;padding:25px">No requests found.</td></tr>';
 }
 
@@ -868,6 +868,19 @@ localStorage.setItem(KEY,JSON.stringify(data));
 closeEditor();updateReports();updateFollowups()
 }
 function closeEditor(){$('editor').classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
+async function deleteRequest(ref){
+  if(!userCan('del')){alert('You do not have permission to delete requests.');return}
+  const r=data.find(x=>Number(x.ref)===Number(ref));
+  if(!r)return;
+  if(!confirm('Delete request #'+ref+'? This will remove the shared request for every authorised user.'))return;
+  if(CLOUD_ENABLED){
+    const {error}=await supa.from('uw_requests').delete().eq('ref',Number(ref));
+    if(error){alert('Request delete failed: '+error.message);return}
+  }
+  data=data.filter(x=>Number(x.ref)!==Number(ref));
+  localStorage.setItem(KEY,JSON.stringify(data));
+  render();updateReports();updateFollowups();
+}
 function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 async function clearAllData(){
 if(!isMainAdmin){alert('Main Admin access only.');return}
