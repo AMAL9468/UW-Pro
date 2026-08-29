@@ -221,6 +221,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
     <h2 class="sectionTitle">System Settings</h2>
     <p class="muted">Cloud database status: <b id="settingsSync">Not configured</b></p>
     <p class="muted">Supabase cloud sync is configured for this project. Make sure the UW Pro SQL schema has been run in Supabase before saving data. Tracking Reference is included for Claims and all underwriting requests (Medical / General).</p>
+    <p class="muted"><b>RLS note:</b> If Save shows a Row Level Security error, run the accompanying <b>UW_Pro_RLS_Fix.sql</b> in your Supabase SQL Editor once. Do not put a service-role key in this HTML.</p>
   </div>
 </div>
 
@@ -287,9 +288,23 @@ async function cloudLoad(){
   render(); updateReports(); updateFollowups();
 }
 async function cloudUpsert(r){
-  if(!CLOUD_ENABLED)return;
+  if(!CLOUD_ENABLED)return true;
+  const {data:sessionData}=await supa.auth.getSession();
+  if(!sessionData?.session){
+    alert('Cloud save failed: No active Supabase login session. Please sign in again.');
+    setSyncStatus('Login required');
+    return false;
+  }
   const {error}=await supa.from('uw_requests').upsert(r,{onConflict:'ref'});
-  if(error){console.error(error);alert('Cloud save failed: '+error.message);setSyncStatus('Save error');return false}
+  if(error){
+    console.error('UW Pro cloud save error:',error);
+    if(String(error.message||'').toLowerCase().includes('row-level security')){
+      alert('Cloud save is blocked by Supabase Row Level Security (RLS).\n\nPlease run the UW Pro RLS SQL supplied with this final HTML in Supabase SQL Editor, then sign in again.');
+    }else{
+      alert('Cloud save failed: '+error.message);
+    }
+    setSyncStatus('Save error');return false;
+  }
   setSyncStatus('Connected');return true;
 }
 async function cloudDeleteAll(){
@@ -647,7 +662,17 @@ async function saveClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
   const r={serial_no:Number($('claimSerial').value),policy_number:$('claimPolicyNo').value.trim(),claim_number:$('claimNo').value.trim(),reference:$('claimReference').value.trim(),tracking_reference:$('claimTrackingReference').value.trim(),claim_type:$('claimType').value.trim(),agent_name:$('claimAgent').value.trim(),client_name:$('claimClient').value.trim(),request_date:dateOrNull($('claimDate').value),status:$('claimStatus').value,priority:$('claimPriority').value,notes:$('claimNotes').value.trim(),follow_up_date:dateOrNull($('claimFollow').value)};
   if(!r.policy_number||!r.claim_number||!r.client_name||!r.request_date){alert('Please fill Policy Number, Claim Number, Client Name and Request Date.');return}
-  if(CLOUD_ENABLED){const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'});if(error){alert('Claim cloud save failed: '+error.message);return}}
+  if(CLOUD_ENABLED){
+    const {data:sessionData}=await supa.auth.getSession();
+    if(!sessionData?.session){alert('Cloud save failed: No active Supabase login session. Please sign in again.');return}
+    const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'});
+    if(error){
+      console.error('UW Pro claim cloud save error:',error);
+      if(String(error.message||'').toLowerCase().includes('row-level security')) alert('Claim cloud save is blocked by Supabase RLS. Please run the supplied UW Pro RLS SQL in Supabase SQL Editor.');
+      else alert('Claim cloud save failed: '+error.message);
+      return;
+    }
+  }
   const idx=claims.findIndex(x=>Number(x.serial_no)===Number(r.serial_no));if(idx>=0)claims[idx]=r;else claims.push(r);
   localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
   closeClaimEditor();renderClaims();updateClaimSummary();
