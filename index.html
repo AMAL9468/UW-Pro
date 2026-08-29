@@ -235,7 +235,6 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <div><label>Email</label><input id="email" type="email" placeholder="client@example.com"></div>
 <div><label>Business Type</label><select id="business"><option>Group Medical</option><option>General Non-Motor</option></select></div>
 <div><label>Cover Type</label><input id="cover"></div>
-<div><label>Sum Insured</label><input id="sumInsured" type="number" step="0.01" placeholder="0.00"></div>
 <div><label>Priority</label><select id="priority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
 <div><label>Status</label><select id="status"><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select></div>
 <div><label>Follow-up Date</label><input id="follow" type="date"></div>
@@ -244,9 +243,6 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <div><label>Previous Premium</label><input id="prevPremium" type="number" step="0.01"></div>
 <div><label>Quoted Premium</label><input id="quotePremium" type="number" step="0.01"></div>
 <div><label>Previous Insurer</label><input id="prevInsurer"></div>
-<div><label>Previous Policy No.</label><input id="prevPolicy"></div>
-<div><label>Policy / Risk Type</label><input id="policyType"></div>
-<div><label>Quotation Deadline</label><input id="quoteDeadline" type="date"></div>
 <div class="full"><label>Remarks</label><textarea id="remarks" rows="3" placeholder="Add underwriting notes, requirements, exclusions or follow-up details..."></textarea></div>
 </div><div class="actions"><button id="saveRequestBtn" class="primary" onclick="save()">Save / Update</button><button class="secondary" onclick="closeEditor()">Cancel</button></div>
 </div>
@@ -677,7 +673,7 @@ async function exportClaimsExcel(){
   ws.getRow(1).height=28;ws.getRow(1).eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'1F4E78'}};c.font={bold:true,color:{argb:'FFFFFF'}};c.alignment={horizontal:'center',vertical:'middle'};c.border=border});
   [8,18,18,16,20,20,20,26,14,24,12,38,15].forEach((w,i)=>ws.getColumn(i+1).width=w);
   for(let i=2;i<=ws.rowCount;i++){const row=ws.getRow(i);row.eachCell((c,col)=>{c.border=border;c.alignment={vertical:'middle',wrapText:col===11}});
-    [9,13].forEach(c=>{if(row.getCell(c).value)row.getCell(c).numFmt='dd-mmm-yyyy'});
+    [9,13].forEach(c=>{if(row.getCell(c).value)row.getCell(c).numFmt='dd-mm-yyyy'});
     const sc={'Requested':'FFF2CC','Registered':'D9EAF7','Addition Info':'FCE4D6','Payment Under Process':'E2F0D9'},pc={'Urgent':'F4CCCC','High':'FCE4D6','Normal':'E7E6E6','Low':'F2F2F2'};
     if(sc[row.getCell(10).value]){const c=row.getCell(10);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:sc[row.getCell(9).value]}};c.font={bold:true}}
     if(pc[row.getCell(11).value]){const c=row.getCell(11);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:pc[row.getCell(10).value]}};c.font={bold:true}}
@@ -708,16 +704,15 @@ function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&l
 function numOrNull(v){const t=String(v??'').trim();return t===''?null:Number(t)}
 function dateOrNull(v){const t=String(v??'').trim();return t===''?null:t}
 function newRequest(){showPage('mainPage',document.querySelector('.navBtn'));editing=null;$('editorTitle').textContent='New Request';clearForm();$('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);$('date').value=today();$('follow').value=new Date(Date.now()+3*864e5).toISOString().slice(0,10);$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
-function clearForm(){['agent','client','phone','email','trackingReference','cover','sumInsured','follow','members','expiry','prevPremium','quotePremium','prevInsurer','prevPolicy','policyType','quoteDeadline','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
+function clearForm(){['agent','client','phone','email','trackingReference','cover','sumInsured','follow','members','expiry','prevPremium','quotePremium','prevInsurer','remarks'].forEach(id=>$(id).value='');$('priority').value='Normal';$('status').value='Pending';$('business').value='Group Medical'}
 function edit(ref){let r=data.find(x=>x.ref===ref);if(!r)return;editing=ref;$('editorTitle').textContent='Edit Request #'+ref;Object.keys(r).forEach(k=>{if($(k))$(k).value=r[k]??''});$('dashboard').classList.add('hidden');$('editor').classList.remove('hidden')}
 async function save(){
 let r={
 ref:Number($('ref').value),tracking_reference:$('trackingReference').value.trim(),date:$('date').value,agent:$('agent').value,client:$('client').value,
 phone:$('phone').value,email:$('email').value,business:$('business').value,cover:$('cover').value,
-sumInsured:numOrNull($('sumInsured').value),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),
+priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),
 members:numOrNull($('members').value),expiry:dateOrNull($('expiry').value),prevPremium:numOrNull($('prevPremium').value),quotePremium:numOrNull($('quotePremium').value),
-prevInsurer:$('prevInsurer').value,prevPolicy:$('prevPolicy').value,policyType:$('policyType').value,
-quoteDeadline:dateOrNull($('quoteDeadline').value),remarks:$('remarks').value
+prevInsurer:$('prevInsurer').value,remarks:$('remarks').value
 };
 if(!r.client||!r.agent||!r.date){alert('Please fill Date, Agent and Client.');return}
 if(CLOUD_ENABLED){const ok=await cloudUpsert(r);if(!ok)return}
@@ -747,9 +742,9 @@ async function exportExcel(){
   }
   if(!window.ExcelJS){alert('Excel export library could not load. Please check your internet connection and try again.');return}
 
-  const headers=['S.No.','Reference No.','Tracking Reference','Request Date','Month','Ageing (Days)','Agent / Broker','Client / Insured','Phone','Email','Business Type','Cover Type','Sum Insured','Priority','Status','Follow-up Date','Members','Policy Expiry','Previous Premium','Quoted Premium','Previous Insurer','Previous Policy No.','Policy / Risk Type','Quotation Deadline','Remarks'];
+  const headers=['S.No.','Reference No.','Tracking Reference','Request Date','Month','Ageing (Days)','Agent / Broker','Client / Insured','Phone','Email','Business Type','Cover Type','Priority','Status','Follow-up Date','Members','Policy Expiry','Previous Premium','Quoted Premium','Previous Insurer','Remarks'];
   const body=data.map((r,i)=>[
-    i+1,r.ref,r.tracking_reference||'',r.date,monthLabel(r.date),ageingDays(r.date),r.agent,r.client,r.phone||'',r.email||'',r.business,r.cover,r.sumInsured==null?'':r.sumInsured,r.priority,r.status,r.follow||'',r.members==null?'':r.members,r.expiry||'',r.prevPremium==null?'':r.prevPremium,r.quotePremium==null?'':r.quotePremium,r.prevInsurer,r.prevPolicy,r.policyType,r.quoteDeadline||'',r.remarks||''
+    i+1,r.ref,r.tracking_reference||'',r.date,monthLabel(r.date),ageingDays(r.date),r.agent,r.client,r.phone||'',r.email||'',r.business,r.cover,r.priority,r.status,r.follow||'',r.members==null?'':r.members,r.expiry||'',r.prevPremium==null?'':r.prevPremium,r.quotePremium==null?'':r.quotePremium,r.prevInsurer,r.remarks||''
   ]);
 
   const wb=new ExcelJS.Workbook();
@@ -776,7 +771,7 @@ async function exportExcel(){
     cell.border=thinBorder;
   });
 
-  const widths=[8,14,18,14,14,13,20,26,17,28,20,22,16,12,13,15,10,15,16,16,20,22,18,20,35];
+  const widths=[8,14,18,14,14,13,20,26,17,28,20,22,12,13,15,10,15,16,16,20,35];
   widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
 
   for(let r=2;r<=ws.rowCount;r++){
@@ -784,10 +779,10 @@ async function exportExcel(){
     row.height=22;
     row.eachCell((cell,col)=>{
       cell.border=thinBorder;
-      cell.alignment={vertical:'middle',wrapText:col===25};
+      cell.alignment={vertical:'middle',wrapText:col===21};
     });
-    [13,19,20].forEach(col=>{ row.getCell(col).numFmt='#,##0.00'; });
-    [4,16,18,24].forEach(col=>{ if(row.getCell(col).value) row.getCell(col).numFmt='dd-mmm-yyyy'; });
+    [18,19].forEach(col=>{ row.getCell(col).numFmt='#,##0.00'; });
+    [4,15,17].forEach(col=>{ if(row.getCell(col).value) row.getCell(col).numFmt='dd-mm-yyyy'; });
 
     const status=String(row.getCell(15).value||'');
     const priority=String(row.getCell(14).value||'');
