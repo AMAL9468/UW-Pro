@@ -16,7 +16,6 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 .badge{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}.quoted{background:#fef3c7;color:#92400e}.confirmed{background:#dbeafe;color:#1d4ed8}.issued{background:#dcfce7;color:#15803d}.declined{background:#fee2e2;color:#b91c1c}.pending{background:#fff;color:#475569;border:1px solid #e5e7eb}.urgent{background:#fee2e2;color:#b91c1c}.high{background:#ffedd5;color:#c2410c}.normal{background:#e5e7eb;color:#475569}.low{background:#f1f5f9;color:#64748b}
 .form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.form label{font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:5px}.form input,.form select,.form textarea{width:100%}.full{grid-column:1/-1}.actions{display:flex;gap:8px;margin-top:15px}
 .login{position:fixed;inset:0;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}.loginBox{width:min(400px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 20px 55px #0001}.loginBox input{width:100%;padding:12px;margin:7px 0;border:1px solid #d1d5db;border-radius:9px}.loginBox button{width:100%;margin-top:8px;background:#1f4e78;color:#fff}.hidden{display:none!important}
-#bootScreen{position:fixed;inset:0;background:#f3f6fa;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .15s ease}.bootBox{background:#fff;padding:22px 28px;border-radius:14px;box-shadow:0 12px 35px #0001;text-align:center}.bootLogo{font-size:24px;font-weight:900;color:#1f4e78}.bootText{margin-top:6px;color:#64748b;font-size:13px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}}
 @media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:12px}header{padding:13px}.toolbar input{min-width:100%}}
 
@@ -61,8 +60,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div id="bootScreen"><div class="bootBox"><div class="bootLogo">UW Pro</div><div class="bootText">Checking secure session…</div></div></div>
-<div id="login" class="login"><div class="loginBox">
+<div id="login" class="login" style="visibility:hidden"><div class="loginBox">
 <div class="brandMark">UW</div>
 <h1>UW Pro</h1><p class="muted">Underwriting Workflow Dashboard</p>
 <label class="loginLabel">Username</label>
@@ -584,12 +582,22 @@ async function logout(){
   try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
   sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');localStorage.removeItem('uwpro_current_user');location.reload();
 }
+function showLoginScreen(){
+  const login=$('login');
+  if(login) login.style.visibility='visible';
+}
+
+// Never leave the user on a loading screen. If session restoration takes too long,
+// reveal the normal login screen; a valid session can still restore afterwards.
+const loginRevealTimer=setTimeout(showLoginScreen,4000);
+
 async function restoreSession(){
-  if(!CLOUD_ENABLED)return;
+  if(!CLOUD_ENABLED){clearTimeout(loginRevealTimer);showLoginScreen();return;}
   try{
     const {data:sessionData,error:sessionError}=await supa.auth.getSession();
     if(sessionError||!sessionData?.session){
       sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');
+      clearTimeout(loginRevealTimer);showLoginScreen();
       return;
     }
     const email=sessionData.session.user.email||'';
@@ -614,7 +622,8 @@ async function restoreSession(){
 
     if(!u){
       // Do not destroy a valid Supabase session just because the profile lookup
-      // failed. Keep the login screen until the profile becomes available.
+      // failed. Keep the session intact and reveal login only as a fallback.
+      clearTimeout(loginRevealTimer);showLoginScreen();
       return;
     }
     if(u.active===false){await supa.auth.signOut();sessionStorage.clear();localStorage.removeItem('uwpro_current_user');return}
@@ -623,13 +632,15 @@ async function restoreSession(){
     isMainAdmin=u.role==='Main Admin' || (u.username===MAIN_ADMIN_USERNAME && u.email===MAIN_ADMIN_EMAIL);
     sessionStorage.uw=1;sessionStorage.userEmail=u.email;sessionStorage.isAdmin=isMainAdmin?'1':'0';
     localStorage.setItem('uwpro_current_user',JSON.stringify(u));
-    $('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
+    clearTimeout(loginRevealTimer);
+    $('login').classList.add('hidden');$('login').style.visibility='visible';$('who').textContent=u.username;applyPermissions();
     showPage('mainPage',document.querySelector('.navBtn'));
     await cloudLoad();
     if(userCan('claims')) await loadClaims();
   }catch(e){
     console.error('Session restore failed:',e);
-    // Keep the user logged in if Supabase still has a valid session.
+    // Do not sign out on a transient network/RLS error. Reveal login as a safe fallback.
+    clearTimeout(loginRevealTimer);showLoginScreen();
   }
 }
 function userCan(permission){return !!isMainAdmin || !!currentPerms[permission]}
