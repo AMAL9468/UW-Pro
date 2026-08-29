@@ -76,7 +76,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
   <div class="sideBrand">UW Pro<span>Underwriting Workflow</span></div>
   <button id="navMain" class="navBtn active" onclick="showPage('mainPage',this)">Main</button>
   <button id="navReports" class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
-  <button id="navRequests" class="navBtn" onclick="showPage('requestsPage',this)">Requests</button>
+  <button id="navRequests" class="navBtn" onclick="openRequestsFromNav(this)">Requests</button>
   <button id="navFollowups" class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
   <button id="navClaims" class="navBtn" onclick="showPage('claimsPage',this)">Claims</button>
   <button id="navUsers" class="navBtn" onclick="showPage('usersPage',this)">Users</button>
@@ -390,6 +390,13 @@ async function saveUser(){
  }
 }
 
+
+function openRequestsFromNav(btn){
+  if(!userCan('requests')){alert('You do not have permission to open this section.');return}
+  newRequest();
+  document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
 
 function showPage(id,btn){
   const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',followupsPage:'followups',claimsPage:'claims'};
