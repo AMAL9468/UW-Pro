@@ -545,7 +545,7 @@ async function login(){
     currentUser=profile;
     currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(profile.permissions||{})};
     isMainAdmin=profile.role==='Main Admin' || (profile.username===MAIN_ADMIN_USERNAME && profile.email===MAIN_ADMIN_EMAIL);
-    sessionStorage.uw=1; sessionStorage.userEmail=profile.email; sessionStorage.isAdmin=isMainAdmin?'1':'0';
+    sessionStorage.uw=1; sessionStorage.userEmail=profile.email; sessionStorage.isAdmin=isMainAdmin?'1':'0'; localStorage.setItem('uwpro_current_user',JSON.stringify(profile));
     $('login').classList.add('hidden'); $('who').textContent=profile.username;
     applyPermissions();
     showPage('mainPage',document.querySelector('.navBtn'));
@@ -580,18 +580,55 @@ if(CLOUD_ENABLED)supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECO
 
 async function logout(){
   try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
-  sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');location.reload();
+  sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');localStorage.removeItem('uwpro_current_user');location.reload();
 }
 async function restoreSession(){
-  if(sessionStorage.uw!=='1')return;
-  if(!CLOUD_ENABLED){sessionStorage.clear();return}
-  const {data:sessionData}=await supa.auth.getSession();
-  if(!sessionData?.session){sessionStorage.clear();return}
-  const email=sessionData.session.user.email;
-  const {data:u}=await supa.from('uw_users').select('*').eq('email',email).maybeSingle();
-  if(!u||u.active===false){await supa.auth.signOut();sessionStorage.clear();return}
-  currentUser=u;currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
-  isMainAdmin=u.role==='Main Admin';$('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
+  if(!CLOUD_ENABLED)return;
+  try{
+    const {data:sessionData,error:sessionError}=await supa.auth.getSession();
+    if(sessionError||!sessionData?.session){
+      sessionStorage.removeItem('uw');sessionStorage.removeItem('userEmail');sessionStorage.removeItem('isAdmin');
+      return;
+    }
+    const email=sessionData.session.user.email||'';
+    let u=null;
+    const lookup=await supa.from('uw_users').select('*').eq('email',email).maybeSingle();
+    if(!lookup.error) u=lookup.data;
+
+    // If the profile lookup is temporarily blocked by RLS/network, restore from
+    // the last verified profile instead of logging the user out on refresh.
+    if(!u){
+      try{
+        const cached=JSON.parse(localStorage.getItem('uwpro_current_user')||'null');
+        if(cached && String(cached.email||'').toLowerCase()===String(email).toLowerCase()) u=cached;
+      }catch(e){}
+    }
+
+    // Fixed Main Admin identity can also be restored even if the profile query
+    // is temporarily unavailable.
+    if(!u && email.toLowerCase()===MAIN_ADMIN_EMAIL.toLowerCase()){
+      u={username:MAIN_ADMIN_USERNAME,email:MAIN_ADMIN_EMAIL,role:'Main Admin',active:true,permissions:DEFAULT_PERMS['Main Admin']};
+    }
+
+    if(!u){
+      // Do not destroy a valid Supabase session just because the profile lookup
+      // failed. Keep the login screen until the profile becomes available.
+      return;
+    }
+    if(u.active===false){await supa.auth.signOut();sessionStorage.clear();localStorage.removeItem('uwpro_current_user');return}
+    currentUser=u;
+    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
+    isMainAdmin=u.role==='Main Admin' || (u.username===MAIN_ADMIN_USERNAME && u.email===MAIN_ADMIN_EMAIL);
+    sessionStorage.uw=1;sessionStorage.userEmail=u.email;sessionStorage.isAdmin=isMainAdmin?'1':'0';
+    localStorage.setItem('uwpro_current_user',JSON.stringify(u));
+    $('login').classList.add('hidden');$('who').textContent=u.username;applyPermissions();
+    showPage('mainPage',document.querySelector('.navBtn'));
+    await cloudLoad();
+    if(userCan('claims')) await loadClaims();
+  }catch(e){
+    console.error('Session restore failed:',e);
+    // Keep the user logged in if Supabase still has a valid session.
+  }
 }
 function userCan(permission){return !!isMainAdmin || !!currentPerms[permission]}
 function applyPermissions(){
