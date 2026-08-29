@@ -222,7 +222,7 @@ input[placeholder="DD-MM-YYYY"]{font-variant-numeric:tabular-nums}</style>
       <div class="smallCard"><div class="muted">Account Status</div><div style="font-weight:700;margin-top:6px" id="profileStatus">—</div></div>
     </div>
   </div>
-  <div class="card" style="margin-bottom:14px">
+  <div id="adminDetailsCard" class="card" style="margin-bottom:14px">
     <h2 class="sectionTitle">Main Admin Details</h2>
     <div class="grid" style="grid-template-columns:repeat(2,1fr);margin-top:14px">
       <div class="smallCard"><div class="muted">Admin Username</div><div style="font-weight:700;margin-top:6px">admin</div></div>
@@ -692,6 +692,10 @@ function renderProfileDetails(){
   if($('profileEmail'))$('profileEmail').textContent=u.email||'—';
   if($('profileRole'))$('profileRole').textContent=u.role||'—';
   if($('profileStatus'))$('profileStatus').textContent=u.active===false?'Disabled':'Active';
+  // Show Main Admin details only to the currently logged-in Main Admin.
+  // Normal users see only their own profile information in Settings.
+  const adminCard=$('adminDetailsCard');
+  if(adminCard) adminCard.classList.toggle('hidden',u.role!=='Main Admin');
 }
 function applyPermissions(){
   const map=[
