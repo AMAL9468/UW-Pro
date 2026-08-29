@@ -55,7 +55,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 .claimSummaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 @media(max-width:900px){.claimSummaryGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.claimSummaryGrid{grid-template-columns:1fr}}
-.resetOverlay{position:fixed;inset:0;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:20px;z-index:120}.resetBox{width:min(420px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 20px 55px #0001}.resetBox h2{margin:0 0 6px;color:#1f4e78}.resetBox input{width:100%;padding:12px;margin:7px 0;border:1px solid #d1d5db;border-radius:9px}.resetBox button{width:100%;margin-top:8px}.resetNote{font-size:12px;color:#64748b;line-height:1.5}.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
+.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -71,21 +71,6 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 <button type="button" class="forgotLink" onclick="forgotPassword()">Forgot password?</button><p class="loginHint">Enter your username or registered email, then use this option to receive a password reset link.</p>
 <p class="loginHint">Authorized users only</p>
 </div></div>
-
-<div id="resetOverlay" class="resetOverlay hidden">
-  <div class="resetBox">
-    <div class="brandMark">UW</div>
-    <h2>UW Pro Password Reset</h2>
-    <p class="muted">Set a new password for your UW Pro account.</p>
-    <label class="loginLabel">New Password</label>
-    <input id="resetPassword" type="password" placeholder="Minimum 6 characters" autocomplete="new-password">
-    <label class="loginLabel">Confirm Password</label>
-    <input id="resetPassword2" type="password" placeholder="Re-enter new password" autocomplete="new-password">
-    <button class="primary" type="button" onclick="completePasswordReset()">Update Password</button>
-    <button class="secondary" type="button" onclick="cancelPasswordReset()">Cancel</button>
-    <p class="resetNote">For your security, this password-reset link can only be used for the intended account.</p>
-  </div>
-</div>
 
 <aside class="sidebar">
   <div class="sideBrand">UW Pro<span>Underwriting Workflow</span></div>
@@ -236,7 +221,6 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
     <h2 class="sectionTitle">System Settings</h2>
     <p class="muted">Cloud database status: <b id="settingsSync">Not configured</b></p>
     <p class="muted">Supabase cloud sync is configured for this project. Make sure the UW Pro SQL schema has been run in Supabase before saving data. Tracking Reference is included for Claims and all underwriting requests (Medical / General).</p>
-    <p class="muted"><b>RLS note:</b> If Save shows a Row Level Security error, run the accompanying <b>UW_Pro_RLS_Fix.sql</b> in your Supabase SQL Editor once. Do not put a service-role key in this HTML.</p>
   </div>
 </div>
 
@@ -281,10 +265,9 @@ const SUPABASE_URL = 'https://ycbghdoeljtxsjvbprkb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_fB_vcUa0VaQPn0aeOnmPMQ_UfWvOeYQ';
 const MAIN_ADMIN_USERNAME = 'admin';
 const MAIN_ADMIN_EMAIL = 'amalkrishnakk73@gmail.com';
+const APP_NAME = 'UW Pro';
 const CLOUD_ENABLED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
-// Production URL used for password-reset links. Add this exact URL to Supabase Auth Redirect URLs.
-const RESET_REDIRECT_URL = 'https://amal9468.github.io/UW-Pro/';
-// Schema addition required once in Supabase SQL Editor: ALTER TABLE uw_requests ADD COLUMN IF NOT EXISTS tracking_reference text; ALTER TABLE uw_claims ADD COLUMN IF NOT EXISTS tracking_reference text;
+// Supabase schema required: tracking_reference on requests/claims and claim_type on claims. See companion migration SQL.
 const supa = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY) : null;
 // Separate non-persistent Auth client used only to create users, so creating a user never logs the Main Admin out.
 const authAdminHelper = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}) : null;
@@ -305,27 +288,14 @@ async function cloudLoad(){
   render(); updateReports(); updateFollowups();
 }
 async function cloudUpsert(r){
-  if(!CLOUD_ENABLED)return true;
-  const {data:sessionData}=await supa.auth.getSession();
-  if(!sessionData?.session){
-    alert('Cloud save failed: No active Supabase login session. Please sign in again.');
-    setSyncStatus('Login required');
-    return false;
-  }
+  if(!CLOUD_ENABLED)return;
   const {error}=await supa.from('uw_requests').upsert(r,{onConflict:'ref'});
-  if(error){
-    console.error('UW Pro cloud save error:',error);
-    if(String(error.message||'').toLowerCase().includes('row-level security')){
-      alert('Cloud save is blocked by Supabase Row Level Security (RLS).\n\nPlease run the UW Pro RLS SQL supplied with this final HTML in Supabase SQL Editor, then sign in again.');
-    }else{
-      alert('Cloud save failed: '+error.message);
-    }
-    setSyncStatus('Save error');return false;
-  }
+  if(error){console.error(error);alert('Cloud save failed: '+error.message);setSyncStatus('Save error');return false}
   setSyncStatus('Connected');return true;
 }
 async function cloudDeleteAll(){
   if(!CLOUD_ENABLED)return true;
+  if(!isMainAdmin){alert('Main Admin access only.');return false}
   const req=await supa.from('uw_requests').delete().not('ref','is',null);
   if(req.error){alert('Cloud request delete failed: '+req.error.message);return false}
   const cl=await supa.from('uw_claims').delete().not('serial_no','is',null);
@@ -357,7 +327,8 @@ async function loadUsers(){
 async function deleteUser(userId){
  if(!isMainAdmin){alert('Main Admin access only.');return}
  if(!userId){alert('Invalid user.');return}
- const ok=confirm('Delete this user?\n\nThis removes the UW Pro user record and permissions. Their Supabase Auth account may remain until it is removed from Supabase Auth by an administrator.');
+ if(currentUser?.id===userId){alert('The Main Admin account cannot be deleted from inside UW Pro.');return}
+ const ok=confirm('Delete this user?\n\nThis removes the UW Pro user record and permissions. The Supabase Auth account may remain and can be removed separately by an administrator.');
  if(!ok)return;
  if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
  try{
@@ -377,7 +348,7 @@ async function adminResetPassword(email){
  email=String(email||'').trim();if(!email){alert('This user does not have a registered email address.');return}
  if(!confirm('Send a password reset link to '+email+'?'))return;
  try{
-   const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:RESET_REDIRECT_URL});
+   const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});
    if(error)throw error;
    alert('Password reset link sent to '+email+'. The user can set a new password from that link.');
  }catch(e){alert('Could not send password reset: '+(e?.message||e))}
@@ -411,11 +382,19 @@ async function saveUser(){
    closeUserForm();await loadUsers();
  }catch(e){
    console.error(e);
-   alert('User save failed: '+(e?.message||e));
+   const msg=e?.message||e||'Unknown error';
+   if(/email limit exceeded/i.test(msg)){
+     alert('User save failed: Supabase email sending limit has been reached.
+
+For UW Pro internal user creation, disable Email Confirmations in Supabase Auth settings so creating users does not send a confirmation email. Forgot Password will still use email when requested.');
+   }else if(/rate limit|too many requests/i.test(msg)){
+     alert('User save failed: Supabase Auth rate limit reached. Please wait and try again.');
+   }else{
+     alert('User save failed: '+msg);
+   }
  }
 }
 
-function userCan(permission){return true}
 
 function showPage(id,btn){
   const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',followupsPage:'followups',claimsPage:'claims'};
@@ -593,46 +572,16 @@ async function forgotPassword(){
   try{
     let email=identifier;
     if(!identifier.includes('@')){const {data,error}=await supa.from('uw_users').select('email').eq('username',identifier).maybeSingle();if(error)throw error;if(!data?.email){alert('Username not found.');return}email=data.email}
-    const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:RESET_REDIRECT_URL});if(error)throw error;
+    const {error}=await supa.auth.resetPasswordForEmail(email,{redirectTo:window.location.href.split('#')[0]});if(error)throw error;
     alert('Password reset link sent to the registered email address.');
   }catch(e){alert('Could not send password reset: '+(e?.message||e))}
 }
-function showPasswordReset(){
-  $('resetOverlay').classList.remove('hidden');
-  $('resetPassword').value='';$('resetPassword2').value='';
-  setTimeout(()=>$('resetPassword')?.focus(),100);
+async function updatePasswordAfterRecovery(){
+  const p=prompt('Enter your new password (minimum 6 characters):');if(p===null)return;if(p.length<6){alert('Password must be at least 6 characters.');return}
+  const {error}=await supa.auth.updateUser({password:p});if(error){alert('Password update failed: '+error.message);return}
+  alert('Password updated successfully.');try{await supa.auth.signOut()}catch(e){}
 }
-function cancelPasswordReset(){
-  $('resetOverlay').classList.add('hidden');
-  try{window.history.replaceState({},document.title,RESET_REDIRECT_URL)}catch(e){}
-  try{supa.auth.signOut()}catch(e){}
-}
-async function completePasswordReset(){
-  const p=$('resetPassword').value, p2=$('resetPassword2').value;
-  if(p.length<6){alert('Password must be at least 6 characters.');return}
-  if(p!==p2){alert('Passwords do not match.');return}
-  try{
-    const {error}=await supa.auth.updateUser({password:p});
-    if(error)throw error;
-    alert('UW Pro password updated successfully. Please sign in with your new password.');
-    $('resetOverlay').classList.add('hidden');
-    try{await supa.auth.signOut()}catch(e){}
-    try{window.history.replaceState({},document.title,RESET_REDIRECT_URL)}catch(e){}
-    location.reload();
-  }catch(e){alert('Password update failed: '+(e?.message||e))}
-}
-async function updatePasswordAfterRecovery(){showPasswordReset()}
-if(CLOUD_ENABLED){
-  supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(updatePasswordAfterRecovery,200)});
-  // Also handle a recovery link after the page has already loaded.
-  setTimeout(async()=>{
-    const hash=window.location.hash||'';
-    if(/type=recovery/i.test(hash)){
-      const {data}=await supa.auth.getSession();
-      if(data?.session)showPasswordReset();
-    }
-  },500);
-}
+if(CLOUD_ENABLED)supa.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(updatePasswordAfterRecovery,300)});
 
 async function logout(){
   try{if(CLOUD_ENABLED) await supa.auth.signOut()}catch(e){}
@@ -665,6 +614,9 @@ function applyPermissions(){
   const claimSaveBtn=$('saveClaimBtn');if(claimSaveBtn)claimSaveBtn.classList.toggle('hidden',!userCan('edit'));
 }
 restoreSession();
+// Keep shared data consistent after returning to the app from a password recovery flow.
+window.addEventListener('focus',()=>{ if(sessionStorage.uw==='1' && CLOUD_ENABLED){ cloudLoad(); if(userCan('claims')) loadClaims(); } });
+
 
 const CLAIMS_KEY='uwpro_claims_v1'; let claims=[],editingClaim=null;
 function normalizeClaim(r){return {...r,request_date:normalizeDate(r.request_date),follow_up_date:normalizeDate(r.follow_up_date)}}
@@ -709,17 +661,7 @@ async function saveClaim(){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
   const r={serial_no:Number($('claimSerial').value),policy_number:$('claimPolicyNo').value.trim(),claim_number:$('claimNo').value.trim(),reference:$('claimReference').value.trim(),tracking_reference:$('claimTrackingReference').value.trim(),claim_type:$('claimType').value.trim(),agent_name:$('claimAgent').value.trim(),client_name:$('claimClient').value.trim(),request_date:dateOrNull($('claimDate').value),status:$('claimStatus').value,priority:$('claimPriority').value,notes:$('claimNotes').value.trim(),follow_up_date:dateOrNull($('claimFollow').value)};
   if(!r.policy_number||!r.claim_number||!r.client_name||!r.request_date){alert('Please fill Policy Number, Claim Number, Client Name and Request Date.');return}
-  if(CLOUD_ENABLED){
-    const {data:sessionData}=await supa.auth.getSession();
-    if(!sessionData?.session){alert('Cloud save failed: No active Supabase login session. Please sign in again.');return}
-    const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'});
-    if(error){
-      console.error('UW Pro claim cloud save error:',error);
-      if(String(error.message||'').toLowerCase().includes('row-level security')) alert('Claim cloud save is blocked by Supabase RLS. Please run the supplied UW Pro RLS SQL in Supabase SQL Editor.');
-      else alert('Claim cloud save failed: '+error.message);
-      return;
-    }
-  }
+  if(CLOUD_ENABLED){const {error}=await supa.from('uw_claims').upsert(r,{onConflict:'serial_no'});if(error){alert('Claim cloud save failed: '+error.message);return}}
   const idx=claims.findIndex(x=>Number(x.serial_no)===Number(r.serial_no));if(idx>=0)claims[idx]=r;else claims.push(r);
   localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
   closeClaimEditor();renderClaims();updateClaimSummary();
@@ -791,7 +733,7 @@ function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Nu
 async function clearAllData(){
 if(!isMainAdmin){alert('Main Admin access only.');return}
 if(!data.length){alert('There is no saved data to clear.');return}
-if(confirm('Delete all saved underwriting requests? This cannot be undone.')){
+if(confirm('GLOBAL DELETE: Delete all shared underwriting requests AND claims for EVERY user? This cannot be undone.')){
   if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
   data=[];claims=[];localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);render();renderClaims();updateReports();updateFollowups();updateClaimSummary()
 }}
