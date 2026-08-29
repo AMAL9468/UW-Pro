@@ -373,8 +373,9 @@ async function saveUser(){
      const {data:authData,error:authError}=await authAdminHelper.auth.signUp({email,password});
      if(authError)throw authError;
      const row={username,email,role,active:$('uActive').value==='true',permissions};
-     const {error:rowError}=await supa.from('uw_users').insert(row);
+     const {data:createdRow,error:rowError}=await supa.rpc('create_uw_user',{p_username:username,p_email:email,p_role:role,p_active:row.active,p_permissions:permissions});
      if(rowError)throw rowError;
+     if(!createdRow)throw new Error('User profile was not created.');
      alert(authData?.user
        ? 'User created successfully. They can log in with the email/username and password.'
        : 'User created.');
