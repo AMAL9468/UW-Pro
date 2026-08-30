@@ -261,7 +261,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
   <div class="card" style="margin-bottom:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <div><h2 class="sectionTitle" style="margin-bottom:4px">Follow-up Reminder Center</h2><div class="muted">See overdue, today's and upcoming follow-ups in one place.</div></div>
-      <button id="notifyBtn" class="secondary" onclick="enableNotifications()">Enable Notifications</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="followupRefreshBtn" class="listingRefreshBtn" onclick="refreshFollowupPage()">↻ Refresh</button><button id="notifyBtn" class="secondary" onclick="enableNotifications()">Enable Notifications</button></div>
     </div>
     <div class="grid" style="margin-top:14px;grid-template-columns:repeat(3,1fr)">
       <div class="smallCard"><div class="muted">Overdue</div><div class="num" id="fuOverdue">0</div></div>
@@ -682,10 +682,23 @@ function prepareEditorViews(){
   if(main && ce && ce.parentElement!==main) main.appendChild(ce);
   // Add a consistent Back-to-Main button to every non-main page.
   document.querySelectorAll('.page:not(#mainPage)').forEach(page=>{
-    if(page.querySelector(':scope > .pageBackWrap')) return;
+    if(!page.querySelector(':scope > .pageBackWrap')){
+      const wrap=document.createElement('div');
+      wrap.className='pageBackWrap';
+      wrap.innerHTML='<button type="button" class="backBtn" onclick="backToMain()">← Back to Main</button>';
+      page.insertBefore(wrap,page.firstElementChild);
+    }
+  });
+  // Pages that do not already have their own listing refresh button get a
+  // small page-level refresh button. It refreshes cloud data without navigating.
+  const refreshPages=['mainPage','reportsPage','usersPage','settingsPage'];
+  refreshPages.forEach(pid=>{
+    const page=$(pid);
+    if(!page || page.querySelector(':scope > .pageRefreshWrap')) return;
     const wrap=document.createElement('div');
-    wrap.className='pageBackWrap';
-    wrap.innerHTML='<button type="button" class="backBtn" onclick="backToMain()">← Back to Main</button>';
+    wrap.className='pageRefreshWrap';
+    wrap.style.cssText='display:flex;justify-content:flex-end;margin:0 0 10px;';
+    wrap.innerHTML='<button type="button" class="listingRefreshBtn" onclick="refreshCurrentPage(\''+pid+'\')">↻ Refresh</button>';
     page.insertBefore(wrap,page.firstElementChild);
   });
 }
@@ -774,7 +787,11 @@ function claimFollowupGroups(){
 }
 function cancellationFollowupGroups(){
   const t=today();
-  const active=(cancellations||[]).filter(r=>r.follow_up_date&&!['Closed','Cancelled'].includes(r.status));
+  const source=Array.isArray(cancellations)?cancellations:[];
+  const active=source.filter(r=>{
+    const d=normalizeDate(r.follow_up_date);
+    return !!d && !['Closed','Cancelled'].includes(String(r.status||''));
+  });
   return {
     overdue:active.filter(r=>normalizeDate(r.follow_up_date)<t).sort((a,b)=>String(a.follow_up_date).localeCompare(String(b.follow_up_date))),
     today:active.filter(r=>normalizeDate(r.follow_up_date)===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
@@ -997,7 +1014,7 @@ async function restoreSession(){
     document.body.classList.remove('appBootHidden');
     await cloudLoad();
     if(userCan('claims')) await loadClaims();
-    if(lastPage==='cancellationsPage'&&userCan('cancellations')) await loadCancellations();
+    if(userCan('cancellations')) await loadCancellations();
     updateFollowups();
   }catch(e){
     console.error('Session restore failed:',e);
@@ -1029,6 +1046,52 @@ function applyPermissions(){
 }
 
 function toggleSidebar(){document.querySelector('.sidebar')?.classList.toggle('mobileOpen')}
+async function refreshCurrentPage(pageId){
+  const activeId=document.querySelector('.page.active')?.id||pageId||'mainPage';
+  const id=pageId||activeId;
+  const wrap=$(id)?.querySelector(':scope > .pageRefreshWrap');
+  const b=wrap?.querySelector('button');
+  if(b){b.classList.add('loading');b.disabled=true}
+  try{
+    // Always reload all shared datasets first so Follow-ups never relies on a stale
+    // cancellation cache after a browser refresh.
+    if(CLOUD_ENABLED){
+      await cloudLoad();
+      if(userCan('claims')) await loadClaims();
+      if(userCan('cancellations')) await loadCancellations();
+    }
+    updateReports();
+    updateFollowups();
+    renderMotorRequests();
+    renderClaims();
+    renderCancellations();
+    if(id==='usersPage') await loadUsers();
+    if(id==='settingsPage') renderProfileDetails();
+    // Never navigate: the currently active page stays active.
+    sessionStorage.setItem('uwpro_last_page',activeId);
+    showSuccessToast('Page refreshed');
+  }catch(e){
+    console.error('Page refresh failed:',e);
+    alert('Refresh failed: '+(e?.message||e));
+  }finally{
+    if(b){b.classList.remove('loading');b.disabled=false}
+  }
+}
+
+async function refreshFollowupPage(){
+  const b=$('followupRefreshBtn'); if(b){b.classList.add('loading');b.disabled=true}
+  try{
+    if(CLOUD_ENABLED){
+      await cloudLoad();
+      if(userCan('claims')) await loadClaims();
+      if(userCan('cancellations')) await loadCancellations();
+    }
+    updateFollowups();
+    sessionStorage.setItem('uwpro_last_page','followupsPage');
+    showSuccessToast('Follow-up reminders refreshed');
+  }finally{if(b){b.classList.remove('loading');b.disabled=false}}
+}
+
 async function refreshRequestListing(){
   const b=$('requestRefreshBtn'); if(b)b.classList.add('loading');
   try{await cloudLoad();showSuccessToast('Request listing refreshed');}finally{if(b)b.classList.remove('loading')}
@@ -1041,7 +1104,7 @@ async function refreshClaimListing(){
 prepareEditorViews();
 restoreSession();
 // Keep shared data consistent after returning to the app from a password recovery flow.
-window.addEventListener('focus',()=>{ if(sessionStorage.uw==='1' && CLOUD_ENABLED){ cloudLoad(); if(userCan('claims')) loadClaims(); } });
+window.addEventListener('focus',()=>{ if(sessionStorage.uw==='1' && CLOUD_ENABLED){ cloudLoad(); if(userCan('claims')) loadClaims(); if(userCan('cancellations')) loadCancellations(); updateFollowups(); } });
 
 
 const CLAIMS_KEY='uwpro_claims_v1'; let claims=[],editingClaim=null;
@@ -1412,7 +1475,7 @@ updateReports();
 updateFollowups();
 if(CLOUD_ENABLED) cloudLoad(); else setSyncStatus('Local only');
 setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
-setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();},60000);
+setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();if(userCan('cancellations'))loadCancellations();},60000);
 
 window.addEventListener('beforeunload',()=>{
   const active=document.querySelector('.page.active');
