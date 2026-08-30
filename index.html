@@ -419,12 +419,17 @@ function displayToIso(v){const t=String(v??'').trim();if(!t)return '';if(/^\d{4}
 function normalizeTypedDate(v){
   let t=String(v??'').trim().replace(/\s+/g,'');
   if(!t)return '';
-  // Accept compact 8-digit input such as 02092026 and immediately format it.
+  // Accept both DDMMYYYY (02092026) and YYYYMMDD (20260902).
   const digits=t.replace(/\D/g,'');
   if(digits.length===8 && /^\d{8}$/.test(digits)){
-    const d=digits.slice(0,2),m=digits.slice(2,4),y=digits.slice(4,8);
+    let d,m,y;
+    if(Number(digits.slice(0,4))>=1900){
+      y=digits.slice(0,4); m=digits.slice(4,6); d=digits.slice(6,8);
+    }else{
+      d=digits.slice(0,2); m=digits.slice(2,4); y=digits.slice(4,8);
+    }
     const iso=displayToIso(`${d}-${m}-${y}`);
-    return /^\d{4}-\d{2}-\d{2}$/.test(iso)?isoToDisplay(iso):`${d}-${m}-${y}`;
+    return /^\d{4}-\d{2}-\d{2}$/.test(iso)?isoToDisplay(iso):t;
   }
   // Also normalize a partially/fully typed DDMMYYYY string once it reaches 8 digits.
   if(/^\d{1,8}$/.test(t) && t.length===8){
@@ -444,10 +449,11 @@ function openDatePicker(id){
 }
 function syncNativeDatePicker(id){
   const p=$('picker_'+id),el=$(id);
-  if(!p||!el||!p.value)return;
-  el.value=isoToDisplay(p.value);
-  const normalized=normalizeTypedDate(el.value);
-  el.value=normalized;
+  if(!p||!el)return;
+  if(p.value){
+    // Native date input always returns ISO YYYY-MM-DD; display field always stays DD-MM-YYYY.
+    el.value=isoToDisplay(p.value);
+  }
 }
 function initDatePickers(){
   ['date','follow','expiry','claimDate','claimFollow'].forEach(id=>{
@@ -474,6 +480,7 @@ function bindDateInput(id){
   el.addEventListener('blur',()=>{const formatted=normalizeTypedDate(el.value);el.value=formatted;const p=$('picker_'+id);if(p){const iso=displayToIso(formatted);if(/^\d{4}-\d{2}-\d{2}$/.test(iso))p.value=iso;}});
 }
 ['claimDate','claimFollow','date','follow','expiry'].forEach(bindDateInput);
+initDatePickers();
 function togglePassword(id,btn){const el=$(id);if(!el)return;el.type=el.type==='password'?'text':'password';if(btn)btn.textContent=el.type==='password'?'👁':'🙈'}
 function setRequestTypeUI(type){
   type=type||'General';$('requestType').value=type;
