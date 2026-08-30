@@ -55,7 +55,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 .claimSummaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 @media(max-width:900px){.claimSummaryGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.claimSummaryGrid{grid-template-columns:1fr}.tileGrid{grid-template-columns:1fr}}
-.tileGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:18px 0 24px}.requestTile{min-height:150px;border:0;border-radius:18px;background:linear-gradient(135deg,#1264c7,#27a7d8);color:#fff;box-shadow:0 10px 24px #1f4e7830;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:900;letter-spacing:.4px}.requestTile:hover{transform:translateY(-2px);box-shadow:0 14px 28px #1f4e7840}.requestTile .tileIcon{font-size:34px;line-height:1}.listingTitle{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.miniTable table{min-width:1100px}.fieldHidden{display:none!important}.passwordWrap{position:relative}.passwordWrap input{padding-right:46px}.eyeBtn{position:absolute;right:5px;top:5px;width:36px;height:36px;padding:0;border-radius:8px;background:transparent;color:#475569;font-size:18px}.eyeBtn:hover{background:#eef2f7}.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}
+.tileGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:18px 0 24px}.requestTile{min-height:150px;border:0;border-radius:18px;background:linear-gradient(135deg,#1264c7,#27a7d8);color:#fff;box-shadow:0 10px 24px #1f4e7830;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:900;letter-spacing:.4px}.requestTile:hover{transform:translateY(-2px);box-shadow:0 14px 28px #1f4e7840}.requestTile .tileIcon{font-size:34px;line-height:1}.listingTitle{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.miniTable table{min-width:1100px}.fieldHidden{display:none!important}.passwordWrap{position:relative}.passwordWrap input{padding-right:46px}.eyeBtn{position:absolute;right:5px;top:5px;width:36px;height:36px;padding:0;border-radius:8px;background:transparent;color:#475569;font-size:18px}.eyeBtn:hover{background:#eef2f7}.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}.subNavMenu{padding:2px 8px 8px}.subNavBtn{width:100%;border:0;background:transparent;color:#64748b;text-align:left;padding:9px 14px 9px 28px;border-radius:8px;font-weight:700;cursor:pointer}.subNavBtn:hover,.subNavBtn.active{background:#eef4fb;color:#1264c7}.passwordWrap{position:relative}.passwordWrap input{width:100%;box-sizing:border-box;padding-right:42px}.eyeBtn{position:absolute!important;right:6px!important;top:50%!important;transform:translateY(-50%)!important;width:30px!important;height:30px!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;display:flex;align-items:center;justify-content:center;z-index:2}.eyeBtn:hover{background:#eef2f7!important}
 input[placeholder="DD-MM-YYYY"]{font-variant-numeric:tabular-nums}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -77,7 +77,11 @@ input[placeholder="DD-MM-YYYY"]{font-variant-numeric:tabular-nums}</style>
   <button id="navMain" class="navBtn active" onclick="showPage('mainPage',this)">Main</button>
   <button id="navReports" class="navBtn" onclick="showPage('reportsPage',this)">Reports</button>
   <button id="navFollowups" class="navBtn" onclick="showPage('followupsPage',this)">Follow-ups</button>
-  <button id="navClaims" class="navBtn" onclick="showPage('claimsPage',this)">Claims</button>
+  <button id="navListing" class="navBtn" onclick="toggleListingMenu()">Listing <span style="float:right">▾</span></button>
+  <div id="listingMenu" class="subNavMenu hidden">
+    <button id="navRequestListing" class="subNavBtn" onclick="showPage('requestsPage',this)">Request Listing</button>
+    <button id="navClaimListing" class="subNavBtn" onclick="showPage('claimsPage',this)">Claim Listing</button>
+  </div>
   <button id="navUsers" class="navBtn" onclick="showPage('usersPage',this)">Users</button>
   <button class="navBtn" onclick="showPage('settingsPage',this)">Settings</button>
   <div class="sideBottom"><span class="statusDot"></span> Cloud sync<br><span id="syncStatus">Not configured</span></div>
@@ -103,6 +107,10 @@ input[placeholder="DD-MM-YYYY"]{font-variant-numeric:tabular-nums}</style>
   <button class="requestTile" id="tileMotorClaim" onclick="newClaimType('Motor')"><span class="tileIcon">🚗</span><span>MOTOR CLAIM</span></button>
 </div>
 
+</div>
+</div>
+
+<div id="requestsPage" class="page">
 <div class="card" style="margin-bottom:14px">
   <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">Request Listing</div><div class="muted">All shared requests created by authorised users.</div></div><button id="exportBtn" class="secondary" onclick="exportExcel()">Export Requests Excel</button></div>
   <div class="toolbar">
@@ -116,18 +124,6 @@ input[placeholder="DD-MM-YYYY"]{font-variant-numeric:tabular-nums}</style>
   <div class="tableWrap"><table style="min-width:1800px"><thead><tr>
   <th>Ref</th><th>Type</th><th>UW Name</th><th>Tracking Reference</th><th>Date</th><th>Month</th><th>Agent / Broker</th><th>Client / Insured</th><th>Phone</th><th>Email</th><th>Cover</th><th>Priority</th><th>Status</th><th>Follow-up</th><th>Members</th><th>Policy Expiry</th><th>Previous Premium</th><th>Quoted Premium</th><th>Previous Insurer</th><th>Remarks</th><th>Action</th>
   </tr></thead><tbody id="rows"></tbody></table></div>
-</div>
-
-<div class="card" style="margin-bottom:14px">
-  <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">Claim Listing</div><div class="muted">General, Medical and Motor claims in one shared listing.</div></div><button class="secondary" onclick="showPage('claimsPage',document.querySelector('#navClaims'))">Open Full Claims</button></div>
-  <div class="toolbar">
-    <input id="mainClaimSearch" placeholder="Search claim, policy, client, agent..." oninput="renderMainClaims()">
-    <select id="mainClaimTypeFilter" onchange="renderMainClaims()"><option value="">All Types</option><option>General</option><option>Medical</option><option>Motor</option></select>
-    <select id="mainClaimStatusFilter" onchange="renderMainClaims()"><option value="">All Status</option><option>Requested</option><option>Registered</option><option>Addition Info</option><option>Payment Under Process</option></select>
-    <select id="mainClaimPriorityFilter" onchange="renderMainClaims()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
-  </div>
-  <div class="tableWrap miniTable"><table><thead><tr><th>S.No.</th><th>Type</th><th>Policy No.</th><th>Claim No.</th><th>Agent Name</th><th>Client Name</th><th>Request Date</th><th>Status</th><th>Priority</th><th>Action</th></tr></thead><tbody id="mainClaimRows"></tbody></table></div>
-</div>
 </div>
 </div>
 
@@ -432,6 +428,7 @@ async function saveUser(){
 
 
 function openRequestsFromNav(btn){newRequestType('General')}
+function toggleListingMenu(){const m=$('listingMenu');if(m)m.classList.toggle('hidden');}
 
 function showPage(id,btn){
   const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',followupsPage:'followups',claimsPage:'claims'};
@@ -446,8 +443,9 @@ function showPage(id,btn){
     const dash=$('dashboard');if(dash)dash.classList.remove('hidden');
     const uf=$('userForm');if(uf)uf.classList.add('hidden');
   }
-  document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.navBtn,.subNavBtn').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  if(id==='requestsPage'||id==='claimsPage'){const m=$('listingMenu');if(m)m.classList.remove('hidden');const n=$('navListing');if(n)n.classList.add('active');}
   window.scrollTo({top:0,behavior:'instant'});
   if(id==='reportsPage')updateReports();
   if(id==='followupsPage')updateFollowups();
@@ -705,7 +703,7 @@ function applyPermissions(){
   const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));
   const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
   const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!isMainAdmin);
-  const claimsNav=$('navClaims');if(claimsNav)claimsNav.classList.toggle('hidden',!userCan('claims'));['tileGeneral','tileMedical','tileMotor'].forEach(id=>$(id)?.classList.toggle('hidden',!userCan('edit')));['tileGeneralClaim','tileMedicalClaim','tileMotorClaim'].forEach(id=>$(id)?.classList.toggle('hidden',!(userCan('claims')&&userCan('edit'))));const adminCard=$('adminDetailsCard');if(adminCard)adminCard.classList.toggle('hidden',!isMainAdmin);
+  const reqNav=$('navRequestListing');if(reqNav)reqNav.classList.toggle('hidden',!userCan('requests'));const claimNav=$('navClaimListing');if(claimNav)claimNav.classList.toggle('hidden',!userCan('claims'));const listingNav=$('navListing');if(listingNav)listingNav.classList.toggle('hidden',!userCan('requests')&&!userCan('claims'));['tileGeneral','tileMedical','tileMotor'].forEach(id=>$(id)?.classList.toggle('hidden',!userCan('edit')));['tileGeneralClaim','tileMedicalClaim','tileMotorClaim'].forEach(id=>$(id)?.classList.toggle('hidden',!(userCan('claims')&&userCan('edit'))));const adminCard=$('adminDetailsCard');if(adminCard)adminCard.classList.toggle('hidden',!isMainAdmin);
   const claimExportBtn=$('claimExportBtn');if(claimExportBtn)claimExportBtn.classList.toggle('hidden',!userCan('claimsExport'));
   const claimNewBtn=$('claimNewBtn');if(claimNewBtn)claimNewBtn.classList.toggle('hidden',!userCan('edit'));
   const claimSaveBtn=$('saveClaimBtn');if(claimSaveBtn)claimSaveBtn.classList.toggle('hidden',!userCan('edit'));
@@ -739,7 +737,7 @@ function renderClaims(){
 function newClaim(){newClaimType('General')}
 function newClaimType(type){
   if(!userCan('edit')){alert('You do not have permission to create/edit claims.');return}
-  showPage('claimsPage',$('navClaims'));editingClaim=null;$('claimEditorTitle').textContent='New '+type+' Claim';
+  showPage('claimsPage',$('navClaimListing'));editingClaim=null;$('claimEditorTitle').textContent='New '+type+' Claim';
   $('claimSerial').value=claims.reduce((m,r)=>Math.max(m,Number(r.serial_no)||0),0)+1;
   ['claimPolicyNo','claimNo','claimReference','claimTrackingReference','claimAgent','claimClient','claimFollow','claimNotes'].forEach(id=>$(id).value='');
   $('claimType').value=type;setDateField('claimDate',today());$('claimStatus').value='Requested';$('claimPriority').value='Normal';$('claimEditor').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
