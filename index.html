@@ -759,7 +759,12 @@ function showPage(id,btn){
   if(id==='requestsPage'||id==='motorRequestsPage'||id==='claimsPage'||id==='cancellationsPage'||id==='endorsementsPage'){const m=$('listingMenu');if(m)m.classList.remove('hidden');const n=$('navListing');if(n)n.classList.add('active');} else if(id==='mainPage'){const m=$('listingMenu');if(m)m.classList.add('hidden');}
   window.scrollTo({top:0,behavior:'instant'});
   if(id==='reportsPage')updateReports();
-  if(id==='followupsPage')updateFollowups();
+  if(id==='followupsPage'){
+    updateFollowups();
+    if(CLOUD_ENABLED){
+      Promise.all([cloudLoad(), userCan('claims')?loadClaims():Promise.resolve(), userCan('cancellations')?loadCancellations():Promise.resolve(), userCan('endorsements')?loadEndorsements():Promise.resolve()]).then(()=>updateFollowups());
+    }
+  }
   if(id==='claimsPage')loadClaims();
   if(id==='cancellationsPage')loadCancellations();
   if(id==='endorsementsPage')loadEndorsements();
@@ -804,7 +809,7 @@ function dueGroups(field){
   return {
     overdue:active.filter(r=>normalizeDate(r[field])<t).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field)))),
     today:active.filter(r=>normalizeDate(r[field])===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
-    upcoming:active.filter(r=>normalizeDate(r[field])>t&&dateDiff(r[field],t)<=7).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field))))
+    upcoming:active.filter(r=>normalizeDate(r[field])>t).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field))))
   };
 }
 function followupGroups(){ return dueGroups('follow'); }
@@ -815,7 +820,7 @@ function claimFollowupGroups(){
   return {
     overdue:active.filter(r=>normalizeDate(r.follow_up_date)<t).sort((a,b)=>String(r.follow_up_date).localeCompare(String(b.follow_up_date))),
     today:active.filter(r=>normalizeDate(r.follow_up_date)===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
-    upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t&&dateDiff(r.follow_up_date,t)<=7).sort((a,b)=>String(r.follow_up_date).localeCompare(String(b.follow_up_date)))
+    upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t).sort((a,b)=>String(r.follow_up_date).localeCompare(String(b.follow_up_date)))
   };
 }
 function cancellationFollowupGroups(){
@@ -828,13 +833,13 @@ function cancellationFollowupGroups(){
   return {
     overdue:active.filter(r=>normalizeDate(r.follow_up_date)<t).sort((a,b)=>String(a.follow_up_date).localeCompare(String(b.follow_up_date))),
     today:active.filter(r=>normalizeDate(r.follow_up_date)===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
-    upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t&&dateDiff(r.follow_up_date,t)<=7).sort((a,b)=>String(a.follow_up_date).localeCompare(String(b.follow_up_date)))
+    upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t).sort((a,b)=>String(a.follow_up_date).localeCompare(String(b.follow_up_date)))
   };
 }
 
 function endorsementFollowupGroups(){
   const t=today(); const active=(endorsements||[]).filter(r=>r.follow_up_date&&!['Closed'].includes(String(r.status||'')));
-  return {overdue:active.filter(r=>normalizeDate(r.follow_up_date)<t),today:active.filter(r=>normalizeDate(r.follow_up_date)===t),upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t&&dateDiff(r.follow_up_date,t)<=7)};
+  return {overdue:active.filter(r=>normalizeDate(r.follow_up_date)<t),today:active.filter(r=>normalizeDate(r.follow_up_date)===t),upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t)};
 }
 function followupTotal(g){return g.overdue.length+g.today.length+g.upcoming.length}
 function updateFollowups(){
@@ -967,6 +972,7 @@ async function login(){
     if(userCan('claims')) await loadClaims();
     if(userCan('cancellations')) await loadCancellations();
     if(userCan('endorsements')) await loadEndorsements();
+    // All cloud datasets are loaded before rendering reminders.
     updateFollowups();
   }catch(e){
     console.error(e);
@@ -1062,6 +1068,7 @@ async function restoreSession(){
     if(userCan('claims')) await loadClaims();
     if(userCan('cancellations')) await loadCancellations();
     if(userCan('endorsements')) await loadEndorsements();
+    // All cloud datasets are loaded before rendering reminders.
     updateFollowups();
   }catch(e){
     console.error('Session restore failed:',e);
@@ -1307,6 +1314,12 @@ function showSuccessToast(message){
   window.__uwToastTimer=setTimeout(()=>t.classList.remove('show'),2200);
 }
 
+function goToSavedListing(type){
+  const page=String(type||'General')==='Motor'?'motorRequestsPage':'requestsPage';
+  const btn=String(type||'General')==='Motor'?$('navMotorListing'):$('navRequestListing');
+  showPage(page,btn);
+  window.scrollTo({top:0,behavior:'instant'});
+}
 async function save(){
   const type=$('requestType').value||'General';
   let r={ref:Number($('ref').value),request_type:type,uw_name:$('uwName').value.trim(),medical_type:type==='Medical'?$('medicalType').value:null,tracking_reference:$('trackingReference').value.trim(),date:dateOrNull($('date').value),agent:$('agent').value.trim(),client:$('client').value.trim(),phone:$('phone').value.trim(),email:$('email').value.trim(),cover:$('cover').value.trim(),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),members:type==='Motor'?null:numOrNull($('members').value),expiry:type==='Motor'?null:dateOrNull($('expiry').value),prevPremium:type==='Motor'?null:numOrNull($('prevPremium').value),quotePremium:type==='Motor'?null:numOrNull($('quotePremium').value),prevInsurer:$('prevInsurer').value.trim(),remarks:$('remarks').value.trim()};
@@ -1318,7 +1331,7 @@ async function save(){
   closeEditor();updateReports();updateFollowups();renderMainClaims();renderMotorRequests();
   showSuccessToast(wasEditing?'Request updated successfully':'Request created successfully');
   // After saving, stay in the Request Listing instead of returning to Main.
-  if(userCan('requests')) showPage(type==='Motor'?'motorRequestsPage':'requestsPage', type==='Motor'?$('navMotorListing'):$('navRequestListing'));
+  if(userCan('requests')) goToSavedListing(type);
 }
 function closeEditor(){$('editor').classList.add('hidden');$('claimEditor')?.classList.add('hidden');$('cancellationEditor')?.classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
 async function deleteRequest(ref){
