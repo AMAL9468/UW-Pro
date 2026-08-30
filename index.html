@@ -1318,7 +1318,7 @@ async function save(){
   closeEditor();updateReports();updateFollowups();renderMainClaims();renderMotorRequests();
   showSuccessToast(wasEditing?'Request updated successfully':'Request created successfully');
   // After saving, stay in the Request Listing instead of returning to Main.
-  if(userCan('requests')) showPage('requestsPage',$('navRequests'));
+  if(userCan('requests')) showPage(type==='Motor'?'motorRequestsPage':'requestsPage', type==='Motor'?$('navMotorListing'):$('navRequestListing'));
 }
 function closeEditor(){$('editor').classList.add('hidden');$('claimEditor')?.classList.add('hidden');$('cancellationEditor')?.classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
 async function deleteRequest(ref){
