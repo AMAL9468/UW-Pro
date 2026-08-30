@@ -761,6 +761,8 @@ function dueGroups(field){
     upcoming:active.filter(r=>normalizeDate(r[field])>t&&dateDiff(r[field],t)<=7).sort((a,b)=>String(rValue(a,field)).localeCompare(String(rValue(b,field))))
   };
 }
+function followupGroups(){ return dueGroups('follow'); }
+
 function claimFollowupGroups(){
   const t=today();
   const active=(claims||[]).filter(r=>r.follow_up_date);
@@ -772,7 +774,7 @@ function claimFollowupGroups(){
 }
 function cancellationFollowupGroups(){
   const t=today();
-  const active=(cancellationData||cancellations||[]).filter(r=>r.follow_up_date&&!['Closed','Cancelled'].includes(r.status));
+  const active=(cancellations||[]).filter(r=>r.follow_up_date&&!['Closed','Cancelled'].includes(r.status));
   return {
     overdue:active.filter(r=>normalizeDate(r.follow_up_date)<t).sort((a,b)=>String(a.follow_up_date).localeCompare(String(b.follow_up_date))),
     today:active.filter(r=>normalizeDate(r.follow_up_date)===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
@@ -781,7 +783,9 @@ function cancellationFollowupGroups(){
 }
 function followupTotal(g){return g.overdue.length+g.today.length+g.upcoming.length}
 function updateFollowups(){
-  const g=followupGroups(), cg=claimFollowupGroups(), c=cancellationFollowupGroups();
+  const g=typeof followupGroups==='function'?followupGroups():{overdue:[],today:[],upcoming:[]};
+  const cg=typeof claimFollowupGroups==='function'?claimFollowupGroups():{overdue:[],today:[],upcoming:[]};
+  const c=typeof cancellationFollowupGroups==='function'?cancellationFollowupGroups():{overdue:[],today:[],upcoming:[]};
   const t=g.today.length+cg.today.length+c.today.length, o=g.overdue.length+cg.overdue.length+c.overdue.length, u=g.upcoming.length+cg.upcoming.length+c.upcoming.length;
   if($('fuOverdue'))$('fuOverdue').textContent=o;
   if($('fuToday'))$('fuToday').textContent=t;
@@ -832,7 +836,9 @@ async function enableNotifications(){
 }
 function sendFollowupNotifications(force){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
-  const g=followupGroups(),cg=claimFollowupGroups(),c=cancellationFollowupGroups();
+  const g=typeof followupGroups==='function'?followupGroups():{overdue:[],today:[],upcoming:[]};
+  const cg=typeof claimFollowupGroups==='function'?claimFollowupGroups():{overdue:[],today:[],upcoming:[]};
+  const c=typeof cancellationFollowupGroups==='function'?cancellationFollowupGroups():{overdue:[],today:[],upcoming:[]};
   const key='uwpro_last_notified_'+today();
   if(!force&&localStorage.getItem(key))return;
   const overdue=g.overdue.length+cg.overdue.length+c.overdue.length;
@@ -893,11 +899,12 @@ async function login(){
     sessionStorage.uw=1; sessionStorage.userEmail=profile.email; sessionStorage.isAdmin=isMainAdmin?'1':'0'; localStorage.setItem('uwpro_current_user',JSON.stringify(profile));
     $('login').classList.add('hidden'); $('who').textContent=profile.username;
     applyPermissions();
-    sessionStorage.setItem('uwpro_last_page','mainPage');
     showPage('mainPage',document.querySelector('.navBtn'));
     document.body.classList.remove('appBootHidden');
     await cloudLoad();
     if(userCan('claims')) await loadClaims();
+    if(userCan('cancellations')) await loadCancellations();
+    updateFollowups();
   }catch(e){
     console.error(e);
     const em=String(e?.message||'');
@@ -983,8 +990,9 @@ async function restoreSession(){
     localStorage.setItem('uwpro_current_user',JSON.stringify(u));
     clearTimeout(loginRevealTimer);
     $('login').classList.add('hidden');$('login').style.visibility='visible';$('who').textContent=u.username;const av=$('avatarInitial');if(av)av.textContent=(u.username||'A').charAt(0).toUpperCase();const wr=$('whoRole');if(wr)wr.textContent=u.role||'User';applyPermissions();
-    const lastPage=sessionStorage.getItem('uwpro_last_page')||'mainPage';
+    const storedPage=sessionStorage.getItem('uwpro_last_page')||'mainPage';
     const pageMap={mainPage:'navMain',reportsPage:'navReports',followupsPage:'navFollowups',requestsPage:'navRequestListing',motorRequestsPage:'navMotorListing',claimsPage:'navClaimListing',cancellationsPage:'navCancellationListing',usersPage:'navUsers',settingsPage:null};
+    const lastPage=$(storedPage)?storedPage:'mainPage';
     showPage(lastPage,$(pageMap[lastPage]||'navMain'));
     document.body.classList.remove('appBootHidden');
     await cloudLoad();
@@ -1270,7 +1278,7 @@ function editCancellation(ref){
 function closeCancellationEditor(){$('cancellationEditor').classList.add('hidden');editingCancellation=null;$('dashboard')?.classList.remove('hidden');}
 async function saveCancellation(){
   if(!userCan('cancellations')||!userCan('edit')){alert('You do not have permission to create/edit cancellations.');return}
-  const r={reference_no:Number($('cancelRef').value),policy_number:$('cancelPolicyNo').value.trim(),tracking_reference:$('cancelTrackingReference').value.trim(),cover_type:$('cancelCoverType').value,request_date:dateOrNull($('cancelDate').value),agent_name:$('cancelAgent').value.trim(),uw_name:$('cancelUwName').value.trim(),status:$('cancelStatus').value,priority:$('cancelPriority').value,follow_up_date:dateOrNull($('cancelFollow').value)};
+  const r={reference_no:Number($('cancelRef').value),policy_number:$('cancelPolicyNo').value.trim(),tracking_reference:$('cancelTrackingReference').value.trim(),cover_type:$('cancelCoverType').value,request_date:dateOrNull($('cancelDate').value),agent_name:$('cancelAgent').value.trim(),uw_name:$('cancelUwName').value.trim(),status:$('cancelStatus').value,priority:$('cancelPriority').value,follow_up_date:dateOrNull($('cancelFollow').value),notes:$('cancelNotes').value.trim()};
   if(!r.policy_number||!r.request_date||!r.agent_name||!r.uw_name){alert('Please fill Policy Number, Request Date, Agent Name and UW Name.');return}
   if(CLOUD_ENABLED){const {error}=await supa.from('uw_cancellations').upsert(r,{onConflict:'reference_no'});if(error){alert('Cancellation cloud save failed: '+error.message);return}}
   const idx=cancellations.findIndex(x=>Number(x.reference_no)===Number(r.reference_no));if(idx>=0)cancellations[idx]=r;else cancellations.push(r);localStorage.setItem(CANCELLATIONS_KEY,JSON.stringify(cancellations));
@@ -1405,5 +1413,10 @@ updateFollowups();
 if(CLOUD_ENABLED) cloudLoad(); else setSyncStatus('Local only');
 setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
 setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();},60000);
+
+window.addEventListener('beforeunload',()=>{
+  const active=document.querySelector('.page.active');
+  if(active?.id) sessionStorage.setItem('uwpro_last_page',active.id);
+});
 </script>
 </body></html>
