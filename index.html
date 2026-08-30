@@ -161,6 +161,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
     <button id="navMotorListing" class="subNavBtn" onclick="showPage('motorRequestsPage',this)">Motor</button>
     <button id="navClaimListing" class="subNavBtn" onclick="showPage('claimsPage',this)">Claims</button>
     <button id="navCancellationListing" class="subNavBtn" onclick="showPage('cancellationsPage',this)">Cancellation</button>
+    <button id="navEndorsementListing" class="subNavBtn" onclick="showPage('endorsementsPage',this)">Medical Endorsements</button>
   </div>
   <button id="navUsers" class="navBtn" onclick="showPage('usersPage',this)">Users</button>
   <button class="navBtn" onclick="showPage('settingsPage',this)">Settings</button>
@@ -186,6 +187,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
   <button class="requestTile" id="tileMedicalClaim" onclick="newClaimType('Medical')"><span class="tileIcon">✚</span><span>MEDICAL CLAIM</span></button>
   <button class="requestTile" id="tileMotorClaim" onclick="newClaimType('Motor')"><span class="tileIcon">🚗</span><span>MOTOR CLAIM</span></button>
   <button class="requestTile" id="tileCancellation" onclick="newCancellation()"><span class="tileIcon">↩</span><span>CANCELLATION</span></button>
+  <button class="requestTile" id="tileEndorsement" onclick="newEndorsement()"><span class="tileIcon">✎</span><span>MEDICAL ENDORSEMENTS</span></button>
 </div>
 
 </div>
@@ -309,6 +311,31 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
 </div>
 
 
+<div id="endorsementsPage" class="page">
+  <div class="card" style="margin-bottom:14px">
+    <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">Medical Endorsement Listing</div><div class="muted">Track medical endorsement requests.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="endorsementRefreshBtn" class="listingRefreshBtn" onclick="refreshEndorsementListing()">↻ Refresh</button><button id="endorsementExportBtn" class="secondary" onclick="exportEndorsementsExcel()">Export Excel</button></div></div>
+    <div class="toolbar"><input id="endorsementSearch" placeholder="Search policy, client, tracking reference, endorsement type, agent..." oninput="renderEndorsements()"><select id="endorsementStatusFilter" onchange="renderEndorsements()"><option value="">All Status</option><option>Submitted</option><option>Additional Info</option><option>Closed</option></select></div>
+    <div class="tableWrap"><table style="min-width:1250px"><thead><tr><th>SL.No.</th><th>Policy Number</th><th>Client Name</th><th>Tracking Reference</th><th>Endorsement Type</th><th>Request Date</th><th>Status</th><th>Follow-up Date</th><th>Agent Name</th><th>Notes</th><th>Action</th></tr></thead><tbody id="endorsementRows"></tbody></table></div>
+  </div>
+</div>
+
+<div id="endorsementEditor" class="card hidden">
+  <div class="formViewHeader"><button type="button" class="backBtn" onclick="backToMain()">← Back</button><h2 id="endorsementEditorTitle">New Medical Endorsement</h2></div>
+  <div class="form">
+    <div><label>SL.No.</label><input id="endorsementSlNo" readonly></div>
+    <div><label>Policy Number</label><input id="endorsementPolicyNo" placeholder="Policy number"></div>
+    <div><label>Client Name</label><input id="endorsementClient" placeholder="Client name"></div>
+    <div><label>Tracking Reference</label><input id="endorsementTracking" placeholder="Tracking reference"></div>
+    <div><label>Endorsement Type</label><input id="endorsementType" placeholder="Endorsement type"></div>
+    <div><label>Request Date</label><div class="datePickerWrap"><input id="endorsementRequestDate" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"><button type="button" class="calendarBtn" onclick="openDatePicker('endorsementRequestDate')">📅</button><input id="picker_endorsementRequestDate" class="nativeDatePicker" type="date" tabindex="-1" aria-hidden="true"></div></div>
+    <div><label>Status</label><select id="endorsementStatus"><option>Submitted</option><option>Additional Info</option><option>Closed</option></select></div>
+    <div><label>Follow-up Date</label><div class="datePickerWrap"><input id="endorsementFollow" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"><button type="button" class="calendarBtn" onclick="openDatePicker('endorsementFollow')">📅</button><input id="picker_endorsementFollow" class="nativeDatePicker" type="date" tabindex="-1" aria-hidden="true"></div></div>
+    <div><label>Agent Name</label><input id="endorsementAgent" placeholder="Agent name"></div>
+    <div style="grid-column:1/-1"><label>Notes</label><textarea id="endorsementNotes" rows="3" placeholder="Notes"></textarea></div>
+  </div>
+  <div class="actions"><button id="saveEndorsementBtn" class="primary" onclick="saveEndorsement()">Save / Update Medical Endorsement</button><button class="secondary" onclick="closeEndorsementEditor()">Cancel</button></div>
+</div>
+
 <div id="usersPage" class="page">
   <div class="card" style="margin-bottom:14px"><h2 class="sectionTitle">User Management</h2><div class="muted">Manage UW Pro roles and permissions. This page is visible to the Main Admin. Users are authenticated securely with Supabase Auth. Passwords are never stored in the UW Pro table.</div></div>
   <div class="card" style="margin-bottom:14px">
@@ -326,7 +353,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
       <div><label>Permission Summary</label><input id="uPermSummary" readonly></div>
     </div>
     <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap">
-      <label><input type="checkbox" id="pMain"> Main</label><label><input type="checkbox" id="pReports"> Reports</label><label><input type="checkbox" id="pRequests"> Requests</label><label><input type="checkbox" id="pFollow"> Follow-ups</label><label><input type="checkbox" id="pExport"> Excel Export</label><label><input type="checkbox" id="pEdit"> Create/Edit</label><label><input type="checkbox" id="pDelete"> Delete</label><label><input type="checkbox" id="pClaims"> Claims</label><label><input type="checkbox" id="pClaimsExport"> Claims Excel</label> <label><input type="checkbox" id="pCancellations"> Cancellation</label>
+      <label><input type="checkbox" id="pMain"> Main</label><label><input type="checkbox" id="pReports"> Reports</label><label><input type="checkbox" id="pRequests"> Requests</label><label><input type="checkbox" id="pFollow"> Follow-ups</label><label><input type="checkbox" id="pExport"> Excel Export</label><label><input type="checkbox" id="pEdit"> Create/Edit</label><label><input type="checkbox" id="pDelete"> Delete</label><label><input type="checkbox" id="pClaims"> Claims</label><label><input type="checkbox" id="pClaimsExport"> Claims Excel</label> <label><input type="checkbox" id="pCancellations"> Cancellation</label><label><input type="checkbox" id="pEndorsements"> Medical Endorsements</label>
     </div>
     <div class="actions"><button class="primary" onclick="saveUser()">Save User</button><button class="secondary" onclick="closeUserForm()">Cancel</button></div>
   </div>
@@ -454,15 +481,18 @@ async function cloudDeleteAll(){
   const cl=await supa.from('uw_claims').delete().not('serial_no','is',null);
   if(cl.error){alert('Cloud claims delete failed: '+cl.error.message);return false}
   const cx=await supa.from('uw_cancellations').delete().not('reference_no','is',null);
+  const en=await supa.from('uw_medical_endorsements').delete().not('sl_no','is',null);
   if(cx.error){alert('Cloud cancellation delete failed: '+cx.error.message);return false}
+  if(en.error){alert('Cloud endorsement delete failed: '+en.error.message);return false}
   // Verify both tables are empty before clearing local copies.
-  const [rq,cc,cx2]=await Promise.all([
+  const [rq,cc,cx2,en2]=await Promise.all([
     supa.from('uw_requests').select('ref',{count:'exact',head:true}),
     supa.from('uw_claims').select('serial_no',{count:'exact',head:true}),
-    supa.from('uw_cancellations').select('reference_no',{count:'exact',head:true})
+    supa.from('uw_cancellations').select('reference_no',{count:'exact',head:true}),
+    supa.from('uw_medical_endorsements').select('sl_no',{count:'exact',head:true})
   ]);
-  if(rq.error || cc.error || cx2.error){alert('Global delete verification failed. Local data was kept safe.');return false}
-  if((rq.count||0)!==0 || (cc.count||0)!==0 || (cx2.count||0)!==0){alert('Global delete was not fully completed. Local data was kept safe.');return false}
+  if(rq.error || cc.error || cx2.error || en2.error){alert('Global delete verification failed. Local data was kept safe.');return false}
+  if((rq.count||0)!==0 || (cc.count||0)!==0 || (cx2.count||0)!==0 || (en2.count||0)!==0){alert('Global delete was not fully completed. Local data was kept safe.');return false}
   return true;
 }
 
@@ -583,10 +613,10 @@ function setRequestTypeUI(type){
 
 
 let editingUser=null;
-const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,export:true,claimsExport:true,edit:true,del:true},'Main Admin':{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,export:true,claimsExport:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,export:true,claimsExport:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:false,export:false,claimsExport:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,claims:false,cancellations:false,export:false,claimsExport:false,edit:false,del:false}};
-function applyRoleDefaults(){const r=$('uRole').value,p=DEFAULT_PERMS[r]||DEFAULT_PERMS.Custom;['Main','Reports','Requests','Follow','Claims','ClaimsExport','Cancellations','Export','Edit','Delete'].forEach((x,i)=>{const el=$('p'+x);if(el)el.checked=!!p[['main','reports','requests','followups','claims','claimsExport','cancellations','export','edit','del'][i]]});updatePermSummary()}
-function updatePermSummary(){const names=[['pMain','Main'],['pReports','Reports'],['pRequests','Requests'],['pFollow','Follow-ups'],['pClaims','Claims'],['pClaimsExport','Claims Excel'],['pCancellations','Cancellation'],['pExport','Excel'],['pEdit','Edit'],['pDelete','Delete']];$('uPermSummary').value=names.filter(x=>$(x[0])?.checked).map(x=>x[1]).join(', ')||'None'}
-function openUserForm(u=null){editingUser=u?.id||null;$('userForm').classList.remove('hidden');$('uName').value=u?.username||'';$('uEmail').value=u?.email||'';$('uPass').value='';$('uRole').value=u?.role||'Underwriter';$('uActive').value=String(u?.active!==false);const p=u?.permissions||DEFAULT_PERMS[$('uRole').value]||DEFAULT_PERMS.Custom;[['pMain','main'],['pReports','reports'],['pRequests','requests'],['pFollow','followups'],['pClaims','claims'],['pClaimsExport','claimsExport'],['pCancellations','cancellations'],['pExport','export'],['pEdit','edit'],['pDelete','del']].forEach(([id,k])=>$(id).checked=!!p[k]);updatePermSummary();window.scrollTo({top:0,behavior:'smooth'})}
+const DEFAULT_PERMS={Admin:{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,endorsements:true,export:true,claimsExport:true,edit:true,del:true},'Main Admin':{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,endorsements:true,export:true,claimsExport:true,edit:true,del:true},Underwriter:{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,endorsements:true,export:true,claimsExport:true,edit:true,del:false},Viewer:{main:true,reports:true,requests:true,followups:true,claims:true,cancellations:false,endorsements:false,export:false,claimsExport:false,edit:false,del:false},Custom:{main:true,reports:false,requests:false,followups:false,claims:false,cancellations:false,endorsements:false,export:false,claimsExport:false,edit:false,del:false}};
+function applyRoleDefaults(){const r=$('uRole').value,p=DEFAULT_PERMS[r]||DEFAULT_PERMS.Custom;['Main','Reports','Requests','Follow','Claims','ClaimsExport','Cancellations','Endorsements','Export','Edit','Delete'].forEach((x,i)=>{const el=$('p'+x);if(el)el.checked=!!p[['main','reports','requests','followups','claims','claimsExport','cancellations','endorsements','export','edit','del'][i]]});updatePermSummary()}
+function updatePermSummary(){const names=[['pMain','Main'],['pReports','Reports'],['pRequests','Requests'],['pFollow','Follow-ups'],['pClaims','Claims'],['pClaimsExport','Claims Excel'],['pCancellations','Cancellation'],['pEndorsements','Medical Endorsements'],['pExport','Excel'],['pEdit','Edit'],['pDelete','Delete']];$('uPermSummary').value=names.filter(x=>$(x[0])?.checked).map(x=>x[1]).join(', ')||'None'}
+function openUserForm(u=null){editingUser=u?.id||null;$('userForm').classList.remove('hidden');$('uName').value=u?.username||'';$('uEmail').value=u?.email||'';$('uPass').value='';$('uRole').value=u?.role||'Underwriter';$('uActive').value=String(u?.active!==false);const p=u?.permissions||DEFAULT_PERMS[$('uRole').value]||DEFAULT_PERMS.Custom;[['pMain','main'],['pReports','reports'],['pRequests','requests'],['pFollow','followups'],['pClaims','claims'],['pClaimsExport','claimsExport'],['pCancellations','cancellations'],['pEndorsements','endorsements'],['pExport','export'],['pEdit','edit'],['pDelete','del']].forEach(([id,k])=>$(id).checked=!!p[k]);updatePermSummary();window.scrollTo({top:0,behavior:'smooth'})}
 function closeUserForm(){$('userForm').classList.add('hidden');editingUser=null}
 async function loadUsers(){
  if(!CLOUD_ENABLED){$('userRows').innerHTML='<tr><td colspan="8">Supabase cloud is not configured.</td></tr>';return}
@@ -628,7 +658,7 @@ async function saveUser(){
  const username=$('uName').value.trim(),email=$('uEmail').value.trim(),password=$('uPass').value,role=$('uRole').value;
  if(!username||!email){alert('Username and email are required.');return}
  if(!editingUser && password.length<6){alert('For a new user, password must be at least 6 characters.');return}
- const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,claims:$('pClaims').checked,claimsExport:$('pClaimsExport').checked,cancellations:$('pCancellations').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
+ const permissions={main:$('pMain').checked,reports:$('pReports').checked,requests:$('pRequests').checked,followups:$('pFollow').checked,claims:$('pClaims').checked,claimsExport:$('pClaimsExport').checked,cancellations:$('pCancellations').checked,endorsements:$('pEndorsements').checked,export:$('pExport').checked,edit:$('pEdit').checked,del:$('pDelete').checked};
  if(!CLOUD_ENABLED){alert('Supabase cloud is not configured.');return}
  try{
    if(editingUser){
@@ -680,6 +710,7 @@ function prepareEditorViews(){
   const ce=$('claimEditor');
   if(main && ed && ed.parentElement!==main) main.appendChild(ed);
   if(main && ce && ce.parentElement!==main) main.appendChild(ce);
+  const ee=$('endorsementEditor'); if(main && ee && ee.parentElement!==main) main.appendChild(ee);
   // Add a consistent Back-to-Main button to every non-main page.
   document.querySelectorAll('.page:not(#mainPage)').forEach(page=>{
     if(!page.querySelector(':scope > .pageBackWrap')){
@@ -707,7 +738,7 @@ function openRequestsFromNav(btn){newRequestType('General')}
 function toggleListingMenu(){const m=$('listingMenu');if(m)m.classList.toggle('hidden');}
 
 function showPage(id,btn){
-  const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',motorRequestsPage:'requests',followupsPage:'followups',claimsPage:'claims',cancellationsPage:'cancellations'};
+  const required={mainPage:'main',reportsPage:'reports',requestsPage:'requests',motorRequestsPage:'requests',followupsPage:'followups',claimsPage:'claims',cancellationsPage:'cancellations',endorsementsPage:'endorsements'};
   if(id==='usersPage'&&!isMainAdmin){alert('Main Admin access only.');return}
   if(required[id]&&!userCan(required[id])){alert('You do not have permission to open this section.');return}
   sessionStorage.setItem('uwpro_last_page',id);
@@ -719,17 +750,19 @@ function showPage(id,btn){
     const ed=$('editor');if(ed)ed.classList.add('hidden');
     const ce=$('claimEditor');if(ce)ce.classList.add('hidden');
     const xe=$('cancellationEditor');if(xe)xe.classList.add('hidden');
+    const ee=$('endorsementEditor');if(ee)ee.classList.add('hidden');
     const dash=$('dashboard');if(dash)dash.classList.remove('hidden');
     const uf=$('userForm');if(uf)uf.classList.add('hidden');
   }
   document.querySelectorAll('.navBtn,.subNavBtn').forEach(x=>x.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  if(id==='requestsPage'||id==='motorRequestsPage'||id==='claimsPage'||id==='cancellationsPage'){const m=$('listingMenu');if(m)m.classList.remove('hidden');const n=$('navListing');if(n)n.classList.add('active');} else if(id==='mainPage'){const m=$('listingMenu');if(m)m.classList.add('hidden');}
+  if(id==='requestsPage'||id==='motorRequestsPage'||id==='claimsPage'||id==='cancellationsPage'||id==='endorsementsPage'){const m=$('listingMenu');if(m)m.classList.remove('hidden');const n=$('navListing');if(n)n.classList.add('active');} else if(id==='mainPage'){const m=$('listingMenu');if(m)m.classList.add('hidden');}
   window.scrollTo({top:0,behavior:'instant'});
   if(id==='reportsPage')updateReports();
   if(id==='followupsPage')updateFollowups();
   if(id==='claimsPage')loadClaims();
   if(id==='cancellationsPage')loadCancellations();
+  if(id==='endorsementsPage')loadEndorsements();
   if(id==='motorRequestsPage')renderMotorRequests();
   if(id==='usersPage')loadUsers();
   if(id==='settingsPage')renderProfileDetails();
@@ -798,12 +831,18 @@ function cancellationFollowupGroups(){
     upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t&&dateDiff(r.follow_up_date,t)<=7).sort((a,b)=>String(a.follow_up_date).localeCompare(String(b.follow_up_date)))
   };
 }
+
+function endorsementFollowupGroups(){
+  const t=today(); const active=(endorsements||[]).filter(r=>r.follow_up_date&&!['Closed'].includes(String(r.status||'')));
+  return {overdue:active.filter(r=>normalizeDate(r.follow_up_date)<t),today:active.filter(r=>normalizeDate(r.follow_up_date)===t),upcoming:active.filter(r=>normalizeDate(r.follow_up_date)>t&&dateDiff(r.follow_up_date,t)<=7)};
+}
 function followupTotal(g){return g.overdue.length+g.today.length+g.upcoming.length}
 function updateFollowups(){
   const g=typeof followupGroups==='function'?followupGroups():{overdue:[],today:[],upcoming:[]};
   const cg=typeof claimFollowupGroups==='function'?claimFollowupGroups():{overdue:[],today:[],upcoming:[]};
   const c=typeof cancellationFollowupGroups==='function'?cancellationFollowupGroups():{overdue:[],today:[],upcoming:[]};
-  const t=g.today.length+cg.today.length+c.today.length, o=g.overdue.length+cg.overdue.length+c.overdue.length, u=g.upcoming.length+cg.upcoming.length+c.upcoming.length;
+  const e=typeof endorsementFollowupGroups==='function'?endorsementFollowupGroups():{overdue:[],today:[],upcoming:[]};
+  const t=g.today.length+cg.today.length+c.today.length+e.today.length, o=g.overdue.length+cg.overdue.length+c.overdue.length+e.overdue.length, u=g.upcoming.length+cg.upcoming.length+c.upcoming.length+e.upcoming.length;
   if($('fuOverdue'))$('fuOverdue').textContent=o;
   if($('fuToday'))$('fuToday').textContent=t;
   if($('fuUpcoming'))$('fuUpcoming').textContent=u;
@@ -831,6 +870,9 @@ function updateFollowups(){
   html+=section('Cancellation Follow-ups — Overdue',c.overdue,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
   html+=section('Cancellation Follow-ups — Due Today',c.today,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
   html+=section('Cancellation Follow-ups — Next 7 Days',c.upcoming,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
+  html+=section('Medical Endorsement Follow-ups — Overdue',e.overdue,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
+  html+=section('Medical Endorsement Follow-ups — Due Today',e.today,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
+  html+=section('Medical Endorsement Follow-ups — Next 7 Days',e.upcoming,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
   $('followupList').innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups scheduled.</div>';
   updateNotificationButton();
 }
@@ -856,10 +898,11 @@ function sendFollowupNotifications(force){
   const g=typeof followupGroups==='function'?followupGroups():{overdue:[],today:[],upcoming:[]};
   const cg=typeof claimFollowupGroups==='function'?claimFollowupGroups():{overdue:[],today:[],upcoming:[]};
   const c=typeof cancellationFollowupGroups==='function'?cancellationFollowupGroups():{overdue:[],today:[],upcoming:[]};
+  const e=typeof endorsementFollowupGroups==='function'?endorsementFollowupGroups():{overdue:[],today:[],upcoming:[]};
   const key='uwpro_last_notified_'+today();
   if(!force&&localStorage.getItem(key))return;
-  const overdue=g.overdue.length+cg.overdue.length+c.overdue.length;
-  const due=g.today.length+cg.today.length+c.today.length;
+  const overdue=g.overdue.length+cg.overdue.length+c.overdue.length+e.overdue.length;
+  const due=g.today.length+cg.today.length+c.today.length+e.today.length;
   if(overdue||due){
     const parts=[];
     if(g.overdue.length)parts.push(g.overdue.length+' request follow-up'+(g.overdue.length===1?'':'s')+' overdue');
@@ -868,13 +911,15 @@ function sendFollowupNotifications(force){
     if(cg.today.length)parts.push(cg.today.length+' claim follow-up'+(cg.today.length===1?'':'s')+' due today');
     if(c.overdue.length)parts.push(c.overdue.length+' cancellation follow-up'+(c.overdue.length===1?'':'s')+' overdue');
     if(c.today.length)parts.push(c.today.length+' cancellation follow-up'+(c.today.length===1?'':'s')+' due today');
+    if(e.overdue.length)parts.push(e.overdue.length+' medical endorsement follow-up'+(e.overdue.length===1?'':'s')+' overdue');
+    if(e.today.length)parts.push(e.today.length+' medical endorsement follow-up'+(e.today.length===1?'':'s')+' due today');
     try{new Notification('UW Pro Follow-up Reminder',{body:parts.join(' · ')+' — open UW Pro to review.'});}catch(e){}
     localStorage.setItem(key,'1');
   }
 }
 
 let currentUser=null;
-let currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,export:true,claimsExport:true,edit:true,del:true};
+let currentPerms={main:true,reports:true,requests:true,followups:true,claims:true,cancellations:true,endorsements:true,export:true,claimsExport:true,edit:true,del:true};
 let isMainAdmin=false;
 
 async function login(){
@@ -911,7 +956,7 @@ async function login(){
 
     currentUser=profile;
     renderProfileDetails();
-    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,cancellations:false,export:false,claimsExport:false,edit:false,del:false,...(profile.permissions||{})};
+    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,cancellations:false,endorsements:false,export:false,claimsExport:false,edit:false,del:false,...(profile.permissions||{})};
     isMainAdmin=profile.role==='Main Admin' || (profile.username===MAIN_ADMIN_USERNAME && profile.email===MAIN_ADMIN_EMAIL);
     sessionStorage.uw=1; sessionStorage.userEmail=profile.email; sessionStorage.isAdmin=isMainAdmin?'1':'0'; localStorage.setItem('uwpro_current_user',JSON.stringify(profile));
     $('login').classList.add('hidden'); $('who').textContent=profile.username;
@@ -921,6 +966,7 @@ async function login(){
     await cloudLoad();
     if(userCan('claims')) await loadClaims();
     if(userCan('cancellations')) await loadCancellations();
+    if(userCan('endorsements')) await loadEndorsements();
     updateFollowups();
   }catch(e){
     console.error(e);
@@ -1001,20 +1047,21 @@ async function restoreSession(){
     if(u.active===false){await supa.auth.signOut();sessionStorage.clear();localStorage.removeItem('uwpro_current_user');return}
     currentUser=u;
     renderProfileDetails();
-    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,cancellations:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
+    currentPerms={main:false,reports:false,requests:false,followups:false,claims:false,cancellations:false,endorsements:false,export:false,claimsExport:false,edit:false,del:false,...(u.permissions||{})};
     isMainAdmin=u.role==='Main Admin' || (u.username===MAIN_ADMIN_USERNAME && u.email===MAIN_ADMIN_EMAIL);
     sessionStorage.uw=1;sessionStorage.userEmail=u.email;sessionStorage.isAdmin=isMainAdmin?'1':'0';
     localStorage.setItem('uwpro_current_user',JSON.stringify(u));
     clearTimeout(loginRevealTimer);
     $('login').classList.add('hidden');$('login').style.visibility='visible';$('who').textContent=u.username;const av=$('avatarInitial');if(av)av.textContent=(u.username||'A').charAt(0).toUpperCase();const wr=$('whoRole');if(wr)wr.textContent=u.role||'User';applyPermissions();
     const storedPage=sessionStorage.getItem('uwpro_last_page')||'mainPage';
-    const pageMap={mainPage:'navMain',reportsPage:'navReports',followupsPage:'navFollowups',requestsPage:'navRequestListing',motorRequestsPage:'navMotorListing',claimsPage:'navClaimListing',cancellationsPage:'navCancellationListing',usersPage:'navUsers',settingsPage:null};
+    const pageMap={mainPage:'navMain',reportsPage:'navReports',followupsPage:'navFollowups',requestsPage:'navRequestListing',motorRequestsPage:'navMotorListing',claimsPage:'navClaimListing',cancellationsPage:'navCancellationListing',endorsementsPage:'navEndorsementListing',usersPage:'navUsers',settingsPage:null};
     const lastPage=$(storedPage)?storedPage:'mainPage';
     showPage(lastPage,$(pageMap[lastPage]||'navMain'));
     document.body.classList.remove('appBootHidden');
     await cloudLoad();
     if(userCan('claims')) await loadClaims();
     if(userCan('cancellations')) await loadCancellations();
+    if(userCan('endorsements')) await loadEndorsements();
     updateFollowups();
   }catch(e){
     console.error('Session restore failed:',e);
@@ -1039,7 +1086,7 @@ function applyPermissions(){
   const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));const motorExportBtn=$('motorExportBtn');if(motorExportBtn)motorExportBtn.classList.toggle('hidden',!userCan('export'));
   const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
   const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!isMainAdmin);
-  const reqNav=$('navRequestListing');if(reqNav)reqNav.classList.toggle('hidden',!userCan('requests'));const motorNav=$('navMotorListing');if(motorNav)motorNav.classList.toggle('hidden',!userCan('requests'));const claimNav=$('navClaimListing');if(claimNav)claimNav.classList.toggle('hidden',!userCan('claims'));const cancelNav=$('navCancellationListing');if(cancelNav)cancelNav.classList.toggle('hidden',!userCan('cancellations'));const listingNav=$('navListing');if(listingNav)listingNav.classList.toggle('hidden',!userCan('requests')&&!userCan('claims')&&!userCan('cancellations'));['tileGeneral','tileMedical','tileMotor'].forEach(id=>$(id)?.classList.toggle('hidden',!userCan('edit')));['tileGeneralClaim','tileMedicalClaim','tileMotorClaim'].forEach(id=>$(id)?.classList.toggle('hidden',!(userCan('claims')&&userCan('edit'))));const adminCard=$('adminDetailsCard');if(adminCard)adminCard.classList.toggle('hidden',!isMainAdmin);const cancelTile=$('tileCancellation');if(cancelTile)cancelTile.classList.toggle('hidden',!userCan('cancellations')||!userCan('edit'));const cancelSave=$('saveCancellationBtn');if(cancelSave)cancelSave.classList.toggle('hidden',!userCan('edit'));const cancelExport=$('cancellationExportBtn');if(cancelExport)cancelExport.classList.toggle('hidden',!userCan('export'));
+  const reqNav=$('navRequestListing');if(reqNav)reqNav.classList.toggle('hidden',!userCan('requests'));const motorNav=$('navMotorListing');if(motorNav)motorNav.classList.toggle('hidden',!userCan('requests'));const claimNav=$('navClaimListing');if(claimNav)claimNav.classList.toggle('hidden',!userCan('claims'));const cancelNav=$('navCancellationListing');if(cancelNav)cancelNav.classList.toggle('hidden',!userCan('cancellations'));const listingNav=$('navListing');if(listingNav)listingNav.classList.toggle('hidden',!userCan('requests')&&!userCan('claims')&&!userCan('cancellations'));['tileGeneral','tileMedical','tileMotor'].forEach(id=>$(id)?.classList.toggle('hidden',!userCan('edit')));['tileGeneralClaim','tileMedicalClaim','tileMotorClaim'].forEach(id=>$(id)?.classList.toggle('hidden',!(userCan('claims')&&userCan('edit'))));const adminCard=$('adminDetailsCard');if(adminCard)adminCard.classList.toggle('hidden',!isMainAdmin);const cancelTile=$('tileCancellation');if(cancelTile)cancelTile.classList.toggle('hidden',!userCan('cancellations')||!userCan('edit'));const endorsementNav=$('navEndorsementListing');if(endorsementNav)endorsementNav.classList.toggle('hidden',!userCan('endorsements'));const endorsementTile=$('tileEndorsement');if(endorsementTile)endorsementTile.classList.toggle('hidden',!userCan('endorsements')||!userCan('edit'));const endorsementSave=$('saveEndorsementBtn');if(endorsementSave)endorsementSave.classList.toggle('hidden',!userCan('edit'));const endorsementExport=$('endorsementExportBtn');if(endorsementExport)endorsementExport.classList.toggle('hidden',!userCan('export'));const cancelSave=$('saveCancellationBtn');if(cancelSave)cancelSave.classList.toggle('hidden',!userCan('edit'));const cancelExport=$('cancellationExportBtn');if(cancelExport)cancelExport.classList.toggle('hidden',!userCan('export'));
   const claimExportBtn=$('claimExportBtn');if(claimExportBtn)claimExportBtn.classList.toggle('hidden',!userCan('claimsExport'));
   const claimNewBtn=$('claimNewBtn');if(claimNewBtn)claimNewBtn.classList.toggle('hidden',!userCan('edit'));
   const claimSaveBtn=$('saveClaimBtn');if(claimSaveBtn)claimSaveBtn.classList.toggle('hidden',!userCan('edit'));
@@ -1059,6 +1106,7 @@ async function refreshCurrentPage(pageId){
       await cloudLoad();
       if(userCan('claims')) await loadClaims();
       if(userCan('cancellations')) await loadCancellations();
+      if(userCan('endorsements')) await loadEndorsements();
     }
     updateReports();
     updateFollowups();
@@ -1104,7 +1152,7 @@ async function refreshClaimListing(){
 prepareEditorViews();
 restoreSession();
 // Keep shared data consistent after returning to the app from a password recovery flow.
-window.addEventListener('focus',()=>{ if(sessionStorage.uw==='1' && CLOUD_ENABLED){ cloudLoad(); if(userCan('claims')) loadClaims(); if(userCan('cancellations')) loadCancellations(); updateFollowups(); } });
+window.addEventListener('focus',()=>{ if(sessionStorage.uw==='1' && CLOUD_ENABLED){ cloudLoad(); if(userCan('claims')) loadClaims(); if(userCan('cancellations')) loadCancellations(); if(userCan('endorsements')) loadEndorsements(); updateFollowups(); } });
 
 
 const CLAIMS_KEY='uwpro_claims_v1'; let claims=[],editingClaim=null;
@@ -1304,6 +1352,9 @@ async function deleteRequest(ref){
 }
 function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
 const CANCELLATIONS_KEY='uwpro_cancellations_v1';
+const ENDORSEMENTS_KEY='uwpro_endorsements_v1';
+let endorsements=JSON.parse(localStorage.getItem(ENDORSEMENTS_KEY)||'[]'),editingEndorsement=null;
+const pendingEndorsementDeletes=new Set();
 let cancellations=[],editingCancellation=null;
 const pendingCancellationDeletes=new Set();
 function normalizeCancellation(r){return {...r,request_date:normalizeDate(r.request_date),follow_up_date:normalizeDate(r.follow_up_date)}}
@@ -1357,6 +1408,28 @@ async function deleteCancellation(ref){
   else pendingCancellationDeletes.delete(Number(ref));
 }
 async function refreshCancellationListing(){const b=$('cancellationRefreshBtn');if(b)b.classList.add('loading');try{await loadCancellations();showSuccessToast('Cancellation listing refreshed')}finally{if(b)b.classList.remove('loading')}}
+
+function normalizeEndorsement(r){return {...r,request_date:normalizeDate(r.request_date),follow_up_date:normalizeDate(r.follow_up_date)}}
+async function loadEndorsements(){
+  if(!CLOUD_ENABLED){endorsements=JSON.parse(localStorage.getItem(ENDORSEMENTS_KEY)||'[]').map(normalizeEndorsement);renderEndorsements();return}
+  const {data:rows,error}=await supa.from('uw_medical_endorsements').select('*').order('sl_no',{ascending:false});
+  if(error){console.error(error);setSyncStatus('Endorsement table not configured');endorsements=JSON.parse(localStorage.getItem(ENDORSEMENTS_KEY)||'[]').map(normalizeEndorsement)}
+  else{endorsements=(rows||[]).map(normalizeEndorsement).filter(r=>!pendingEndorsementDeletes.has(Number(r.sl_no)));localStorage.setItem(ENDORSEMENTS_KEY,JSON.stringify(endorsements))}
+  renderEndorsements();updateFollowups();
+}
+function renderEndorsements(){
+  const q=($('endorsementSearch')?.value||'').toLowerCase(),sf=$('endorsementStatusFilter')?.value||'';
+  const rows=[...endorsements].sort((a,b)=>Number(b.sl_no||0)-Number(a.sl_no||0)).filter(r=>(!q||[r.sl_no,r.policy_number,r.client_name,r.tracking_reference,r.endorsement_type,r.agent_name,r.notes].join(' ').toLowerCase().includes(q))&&(!sf||r.status===sf));
+  const el=$('endorsementRows');if(!el)return;el.innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.sl_no)+'</td><td>'+esc(r.policy_number||'')+'</td><td>'+esc(r.client_name||'')+'</td><td>'+esc(r.tracking_reference||'')+'</td><td>'+esc(r.endorsement_type||'')+'</td><td>'+esc(isoToDisplay(r.request_date||''))+'</td><td>'+badge(r.status)+'</td><td>'+esc(isoToDisplay(r.follow_up_date||''))+'</td><td>'+esc(r.agent_name||'')+'</td><td style="white-space:normal;min-width:220px">'+esc(r.notes||'')+'</td><td style="white-space:nowrap"><button class="secondary" onclick="editEndorsement('+Number(r.sl_no)+')">Edit</button>'+(userCan('del')?' <button class="secondary" style="border-color:#d66;color:#b42318" onclick="deleteEndorsement('+Number(r.sl_no)+')">Delete</button>':'')+'</td></tr>').join(''):'<tr><td colspan="11" style="text-align:center;padding:25px">No medical endorsements found.</td></tr>';
+}
+function newEndorsement(){if(!userCan('endorsements')||!userCan('edit')){alert('You do not have permission to create medical endorsements.');return}document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('mainPage').classList.add('active');editingEndorsement=null;$('endorsementEditorTitle').textContent='New Medical Endorsement';$('dashboard').classList.add('hidden');$('editor')?.classList.add('hidden');$('claimEditor')?.classList.add('hidden');$('cancellationEditor')?.classList.add('hidden');$('endorsementSlNo').value=String(endorsements.reduce((m,r)=>Math.max(m,Number(r.sl_no)||0),0)+1);['endorsementPolicyNo','endorsementClient','endorsementTracking','endorsementType','endorsementAgent','endorsementNotes'].forEach(id=>$(id).value='');$('endorsementStatus').value='Submitted';setDateField('endorsementRequestDate',today());setDateField('endorsementFollow','');$('endorsementEditor').classList.remove('hidden');$('endorsementEditor').scrollIntoView({block:'start',behavior:'instant'});}
+function editEndorsement(sl){const r=endorsements.find(x=>Number(x.sl_no)===Number(sl));if(!r)return;if(!userCan('endorsements')||!userCan('edit')){alert('You do not have permission to edit medical endorsements.');return}document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('mainPage').classList.add('active');editingEndorsement=sl;$('endorsementEditorTitle').textContent='Edit Medical Endorsement #'+sl;$('dashboard').classList.add('hidden');$('editor')?.classList.add('hidden');$('claimEditor')?.classList.add('hidden');$('cancellationEditor')?.classList.add('hidden');$('endorsementSlNo').value=r.sl_no||'';$('endorsementPolicyNo').value=r.policy_number||'';$('endorsementClient').value=r.client_name||'';$('endorsementTracking').value=r.tracking_reference||'';$('endorsementType').value=r.endorsement_type||'';$('endorsementStatus').value=r.status||'Submitted';$('endorsementAgent').value=r.agent_name||'';$('endorsementNotes').value=r.notes||'';setDateField('endorsementRequestDate',r.request_date||'');setDateField('endorsementFollow',r.follow_up_date||'');$('endorsementEditor').classList.remove('hidden');$('endorsementEditor').scrollIntoView({block:'start',behavior:'instant'});}
+function closeEndorsementEditor(){$('endorsementEditor').classList.add('hidden');editingEndorsement=null;$('dashboard')?.classList.remove('hidden')}
+async function saveEndorsement(){if(!userCan('endorsements')||!userCan('edit')){alert('You do not have permission to create/edit medical endorsements.');return}const r={sl_no:Number($('endorsementSlNo').value),policy_number:$('endorsementPolicyNo').value.trim(),client_name:$('endorsementClient').value.trim(),tracking_reference:$('endorsementTracking').value.trim(),endorsement_type:$('endorsementType').value.trim(),request_date:dateOrNull($('endorsementRequestDate').value),status:$('endorsementStatus').value,follow_up_date:dateOrNull($('endorsementFollow').value),notes:$('endorsementNotes').value.trim(),agent_name:$('endorsementAgent').value.trim()};if(!r.policy_number||!r.client_name||!r.request_date||!r.agent_name){alert('Please fill Policy Number, Client Name, Request Date and Agent Name.');return}if(CLOUD_ENABLED){const {error}=await supa.from('uw_medical_endorsements').upsert(r,{onConflict:'sl_no'});if(error){alert('Medical endorsement cloud save failed: '+error.message);return}}const idx=endorsements.findIndex(x=>Number(x.sl_no)===Number(r.sl_no));if(idx>=0)endorsements[idx]=r;else endorsements.push(r);localStorage.setItem(ENDORSEMENTS_KEY,JSON.stringify(endorsements));const was=!!editingEndorsement;closeEndorsementEditor();updateFollowups();showSuccessToast(was?'Medical endorsement updated successfully':'Medical endorsement created successfully');if(userCan('endorsements')){showPage('endorsementsPage',$('navEndorsementListing'));renderEndorsements()}}
+async function deleteEndorsement(sl){if(!userCan('del')){alert('You do not have permission to delete medical endorsements.');return}const r=endorsements.find(x=>Number(x.sl_no)===Number(sl));if(!r)return;if(!confirm('Delete medical endorsement #'+sl+' permanently from the cloud?'))return;pendingEndorsementDeletes.add(Number(sl));endorsements=endorsements.filter(x=>Number(x.sl_no)!==Number(sl));localStorage.setItem(ENDORSEMENTS_KEY,JSON.stringify(endorsements));renderEndorsements();updateFollowups();showSuccessToast('Medical endorsement deleted');if(CLOUD_ENABLED){const {error}=await supa.from('uw_medical_endorsements').delete().eq('sl_no',Number(sl));if(error){pendingEndorsementDeletes.delete(Number(sl));endorsements.push(r);localStorage.setItem(ENDORSEMENTS_KEY,JSON.stringify(endorsements));renderEndorsements();alert('Medical endorsement delete failed: '+error.message)}else pendingEndorsementDeletes.delete(Number(sl))}else pendingEndorsementDeletes.delete(Number(sl))}
+async function refreshEndorsementListing(){const b=$('endorsementRefreshBtn');if(b)b.classList.add('loading');try{await loadEndorsements();showSuccessToast('Medical endorsement listing refreshed')}finally{if(b)b.classList.remove('loading')}}
+async function exportEndorsementsExcel(){if(!userCan('export')){alert('You do not have permission to export.');return}if(!endorsements.length){alert('No medical endorsements to export.');return}if(!await ensureExcelJS())return;const headers=['SL.No.','Policy Number','Client Name','Tracking Reference','Endorsement Type','Request Date','Status','Follow-up Date','Agent Name','Notes'];const body=endorsements.map(r=>[r.sl_no,r.policy_number||'',r.client_name||'',r.tracking_reference||'',r.endorsement_type||'',r.request_date||'',r.status||'',r.follow_up_date||'',r.agent_name||'',r.notes||'']);const wb=new ExcelJS.Workbook();wb.creator='UW Pro';const ws=wb.addWorksheet('Medical Endorsements');ws.addRow(headers);body.forEach(r=>ws.addRow(r));styleExportSheet(ws,body,[6,8],7,null,[10]);await downloadExcelWorkbook(wb,'UW_Pro_Medical_Endorsements.xlsx')}
+
 function renderMotorRequests(){
   const q=($('motorSearch')?.value||'').toLowerCase(),sf=$('motorStatusFilter')?.value||'',pf=$('motorPriorityFilter')?.value||'',mf=$('motorMonthFilter')?.value||'';
   const keys=[...new Set(data.filter(r=>(r.request_type||'General')==='Motor').map(r=>monthKey(r.date)).filter(Boolean))].sort().reverse();if($('motorMonthFilter')){const cur=$('motorMonthFilter').value;$('motorMonthFilter').innerHTML='<option value="">All Months</option>'+keys.map(k=>'<option value="'+k+'">'+monthLabel(k)+'</option>').join('');$('motorMonthFilter').value=keys.includes(cur)?cur:''}
@@ -1370,7 +1443,7 @@ if(!isMainAdmin){alert('Main Admin access only.');return}
 if(!data.length){alert('There is no saved data to clear.');return}
 if(confirm('GLOBAL DELETE: Delete all shared underwriting requests AND claims for EVERY user? This cannot be undone.')){
   if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
-  data=[];claims=[];cancellations=[];localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);localStorage.removeItem(CANCELLATIONS_KEY);render();renderMotorRequests();renderClaims();renderCancellations();updateReports();updateFollowups();updateClaimSummary()
+  data=[];claims=[];cancellations=[];endorsements=[];localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);localStorage.removeItem(CANCELLATIONS_KEY);localStorage.removeItem(ENDORSEMENTS_KEY);render();renderMotorRequests();renderClaims();renderCancellations();updateReports();updateFollowups();updateClaimSummary()
 }}
 async function ensureExcelJS(){
   if(window.ExcelJS)return true;
@@ -1468,14 +1541,14 @@ async function exportCancellationsExcel(){
   await downloadExcelWorkbook(wb,'UW_Pro_Cancellations.xlsx');
 }
 function exportExcel(){return exportGeneralMedicalExcel()}
-['pMain','pReports','pRequests','pFollow','pClaims','pClaimsExport','pCancellations','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
+['pMain','pReports','pRequests','pFollow','pClaims','pClaimsExport','pCancellations','pEndorsements','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
 render();
 renderMainClaims();
 updateReports();
 updateFollowups();
-if(CLOUD_ENABLED) cloudLoad(); else setSyncStatus('Local only');
+if(CLOUD_ENABLED){ cloudLoad(); if(userCan('endorsements')) loadEndorsements(); } else setSyncStatus('Local only');
 setTimeout(()=>{updateFollowups();sendFollowupNotifications(false);},1800);
-setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();if(userCan('cancellations'))loadCancellations();},60000);
+setInterval(()=>{updateFollowups();sendFollowupNotifications(false);loadClaims();if(userCan('cancellations'))loadCancellations();if(userCan('endorsements'))loadEndorsements();},60000);
 
 window.addEventListener('beforeunload',()=>{
   const active=document.querySelector('.page.active');
