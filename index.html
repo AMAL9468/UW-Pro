@@ -55,7 +55,7 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 .claimSummaryGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 @media(max-width:900px){.claimSummaryGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.claimSummaryGrid{grid-template-columns:1fr}.tileGrid{grid-template-columns:1fr}}
-.tileGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:18px 0 24px}.requestTile{min-height:150px;border:0;border-radius:18px;background:linear-gradient(135deg,#1264c7,#27a7d8);color:#fff;box-shadow:0 10px 24px #1f4e7830;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:900;letter-spacing:.4px}.requestTile:hover{transform:translateY(-2px);box-shadow:0 14px 28px #1f4e7840}.requestTile .tileIcon{font-size:34px;line-height:1}.listingTitle{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.miniTable table{min-width:1100px}.fieldHidden{display:none!important}.datePickerWrap{position:relative;display:flex;align-items:center}.datePickerWrap>input[type="text"]{width:100%;padding-right:42px}.calendarBtn{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:30px;height:30px;padding:0;border:0;background:transparent;color:#475569;border-radius:7px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:2}.calendarBtn:hover{background:#eef2f7}.nativeDatePicker{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;right:6px;top:50%;}.passwordWrap{position:relative}.passwordWrap input{padding-right:46px}.eyeBtn{position:absolute;right:5px;top:5px;width:36px;height:36px;padding:0;border-radius:8px;background:transparent;color:#475569;font-size:18px}.eyeBtn:hover{background:#eef2f7}.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}.subNavMenu{padding:2px 8px 8px}.subNavBtn{width:100%;border:0;background:transparent;color:#64748b;text-align:left;padding:9px 14px 9px 28px;border-radius:8px;font-weight:700;cursor:pointer}.subNavBtn:hover,.subNavBtn.active{background:#eef4fb;color:#1264c7}.passwordWrap{position:relative}.passwordWrap input{width:100%;box-sizing:border-box;padding-right:42px}.eyeBtn{position:absolute!important;right:6px!important;top:50%!important;transform:translateY(-50%)!important;width:30px!important;height:30px!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;display:flex;align-items:center;justify-content:center;z-index:2}.eyeBtn:hover{background:#eef2f7!important}
+.tileGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:18px 0 24px}.requestTile{min-height:150px;border:0;border-radius:18px;background:linear-gradient(135deg,#1264c7,#27a7d8);color:#fff;box-shadow:0 10px 24px #1f4e7830;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:900;letter-spacing:.4px}.requestTile:hover{transform:translateY(-2px);box-shadow:0 14px 28px #1f4e7840}.requestTile .tileIcon{font-size:34px;line-height:1}.listingTitle{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.miniTable table{min-width:1100px}.fieldHidden{display:none!important}.datePickerWrap{position:relative;display:flex;align-items:center}.datePickerWrap>input[type="text"]{width:100%;padding-right:42px}.calendarBtn{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:30px;height:30px;padding:0;border:0;background:transparent;color:#475569;border-radius:7px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:2}.calendarBtn:hover{background:#eef2f7}.nativeDatePicker{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:auto!important;right:6px;top:50%;}.passwordWrap{position:relative}.passwordWrap input{padding-right:46px}.eyeBtn{position:absolute;right:5px;top:5px;width:36px;height:36px;padding:0;border-radius:8px;background:transparent;color:#475569;font-size:18px}.eyeBtn:hover{background:#eef2f7}.permissionPill{display:inline-block;padding:4px 7px;border-radius:999px;background:#eef2f7;margin:2px;font-size:10px;font-weight:700}.disabledRow{opacity:.55}.subNavMenu{padding:2px 8px 8px}.subNavBtn{width:100%;border:0;background:transparent;color:#64748b;text-align:left;padding:9px 14px 9px 28px;border-radius:8px;font-weight:700;cursor:pointer}.subNavBtn:hover,.subNavBtn.active{background:#eef4fb;color:#1264c7}.passwordWrap{position:relative}.passwordWrap input{width:100%;box-sizing:border-box;padding-right:42px}.eyeBtn{position:absolute!important;right:6px!important;top:50%!important;transform:translateY(-50%)!important;width:30px!important;height:30px!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;display:flex;align-items:center;justify-content:center;z-index:2}.eyeBtn:hover{background:#eef2f7!important}
 input[placeholder="DD-MM-YYYY"]{font-variant-numeric:tabular-nums}
 /* Success toast */
 #successToast{position:fixed;top:22px;right:22px;z-index:99999;display:none;min-width:220px;max-width:calc(100vw - 44px);padding:13px 18px;border-radius:10px;background:#1f7a45;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.18);font-weight:600;font-size:14px;animation:toastIn .2s ease-out;}
@@ -373,6 +373,9 @@ const authAdminHelper = CLOUD_ENABLED ? window.supabase.createClient(SUPABASE_UR
 
 const KEY='uwpro_requests_v1';
 let data=JSON.parse(localStorage.getItem(KEY)||'[]'),editing=null;
+// Keep locally deleted rows hidden while the cloud delete is completing.
+const pendingRequestDeletes=new Set();
+const pendingClaimDeletes=new Set();
 
 function setSyncStatus(t){
   const a=$('syncStatus'),b=$('settingsSync');
@@ -383,7 +386,7 @@ async function cloudLoad(){
   setSyncStatus('Connecting...');
   const {data:rows,error}=await supa.from('uw_requests').select('*').order('ref',{ascending:false});
   if(error){console.error(error);setSyncStatus('Connection error');return}
-  data=(rows||[]).map(normalizeRow);localStorage.setItem(KEY,JSON.stringify(data));setSyncStatus('Connected');
+  data=(rows||[]).map(normalizeRow).filter(r=>!pendingRequestDeletes.has(Number(r.ref)));localStorage.setItem(KEY,JSON.stringify(data));setSyncStatus('Connected');
   render(); updateReports(); updateFollowups();
 }
 async function cloudUpsert(r){
@@ -412,17 +415,63 @@ async function cloudDeleteAll(){
 const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
 function isoToDisplay(v){const t=String(v??'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const [y,m,d]=t.split('-');return `${d}-${m}-${y}`}
 function displayToIso(v){const t=String(v??'').trim();if(!t)return '';if(/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const m=t.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(!m)return t;const [,d,mo,y]=m;const dt=new Date(`${y}-${mo}-${d}T00:00:00`);if(dt.getFullYear()!=Number(y)||dt.getMonth()+1!=Number(mo)||dt.getDate()!=Number(d))return t;return `${y}-${mo}-${d}`}
-function openDatePicker(id){const p=$('picker_'+id),el=$(id);if(!p)return;if(el)p.value=displayToIso(el.value)||'';try{if(p.showPicker)p.showPicker();else p.click()}catch(e){p.click()}}
-function initDatePickers(){['date','follow','expiry','claimDate','claimFollow'].forEach(id=>{const p=$('picker_'+id);if(!p)return;p.addEventListener('change',()=>{const el=$(id);if(el)el.value=isoToDisplay(p.value)});});}
+function normalizeTypedDate(v){
+  let t=String(v??'').trim().replace(/\s+/g,'');
+  if(!t)return '';
+  // Accept compact 8-digit input such as 02092026 and immediately format it.
+  const digits=t.replace(/\D/g,'');
+  if(digits.length===8 && /^\d{8}$/.test(digits)){
+    const d=digits.slice(0,2),m=digits.slice(2,4),y=digits.slice(4,8);
+    const iso=displayToIso(`${d}-${m}-${y}`);
+    return /^\d{4}-\d{2}-\d{2}$/.test(iso)?isoToDisplay(iso):`${d}-${m}-${y}`;
+  }
+  // Also normalize a partially/fully typed DDMMYYYY string once it reaches 8 digits.
+  if(/^\d{1,8}$/.test(t) && t.length===8){
+    const d=t.slice(0,2),m=t.slice(2,4),y=t.slice(4,8);
+    const iso=displayToIso(`${d}-${m}-${y}`);
+    return /^\d{4}-\d{2}-\d{2}$/.test(iso)?isoToDisplay(iso):t;
+  }
+  return t.replace(/[^0-9-]/g,'').slice(0,10);
+}
+function openDatePicker(id){
+  const p=$('picker_'+id),el=$(id);
+  if(!p)return;
+  if(el)p.value=displayToIso(el.value)||'';
+  // Keep the native date control visually hidden, but temporarily make it clickable
+  // so mobile/desktop browsers reliably open the calendar picker.
+  p.style.pointerEvents='auto';
+  try{if(p.showPicker)p.showPicker();else p.click()}catch(e){try{p.click()}catch(_){}}
+}
+function initDatePickers(){
+  ['date','follow','expiry','claimDate','claimFollow'].forEach(id=>{
+    const p=$('picker_'+id);if(!p)return;
+    const sync=()=>{const el=$(id);if(el&&p.value)el.value=isoToDisplay(p.value)};
+    p.addEventListener('change',sync);
+    p.addEventListener('input',sync);
+  });
+}
 function setDateField(id,v){const el=$(id);if(el)el.value=isoToDisplay(v);const p=$('picker_'+id);if(p)p.value=displayToIso(v)||''}
-function dateOrNull(v){const iso=displayToIso(v);return iso===''?null:iso}
-function bindDateInput(id){const el=$(id);if(!el)return;el.addEventListener('blur',()=>{const t=el.value.trim();if(!t)return;const iso=displayToIso(t);if(/^\d{4}-\d{2}-\d{2}$/.test(iso))el.value=isoToDisplay(iso);});el.addEventListener('input',()=>{el.value=el.value.replace(/[^0-9-]/g,'').slice(0,10)})}
+function dateOrNull(v){const iso=displayToIso(normalizeTypedDate(v));return iso===''?null:iso}
+function bindDateInput(id){
+  const el=$(id);if(!el)return;
+  el.addEventListener('input',()=>{
+    const formatted=normalizeTypedDate(el.value);
+    // When 8 digits are entered, immediately show DD-MM-YYYY.
+    if(/^\d{2}-\d{2}-\d{4}$/.test(formatted) || /^\d{8}$/.test(formatted)) el.value=formatted;
+    else el.value=formatted;
+    const p=$('picker_'+id);if(p){const iso=displayToIso(el.value);if(/^\d{4}-\d{2}-\d{2}$/.test(iso))p.value=iso;}
+  });
+  el.addEventListener('blur',()=>{const formatted=normalizeTypedDate(el.value);el.value=formatted;const p=$('picker_'+id);if(p){const iso=displayToIso(formatted);if(/^\d{4}-\d{2}-\d{2}$/.test(iso))p.value=iso;}});
+}
 ['claimDate','claimFollow','date','follow','expiry'].forEach(bindDateInput);
 function togglePassword(id,btn){const el=$(id);if(!el)return;el.type=el.type==='password'?'text':'password';if(btn)btn.textContent=el.type==='password'?'👁':'🙈'}
 function setRequestTypeUI(type){
   type=type||'General';$('requestType').value=type;
   $('medicalTypeWrap').classList.toggle('fieldHidden',type!=='Medical');
-  ['membersWrap','expiryWrap','prevPremiumWrap','quotePremiumWrap'].forEach(id=>$(id)?.classList.toggle('fieldHidden',type==='Motor'));
+  // Members Count is not required for General requests. Keep it only for Medical; Motor also hides it.
+  $('membersWrap')?.classList.toggle('fieldHidden',type!=='Medical');
+  ['expiryWrap','prevPremiumWrap','quotePremiumWrap'].forEach(id=>$(id)?.classList.toggle('fieldHidden',type==='Motor'));
+  if(type!=='Medical' && $('members')) $('members').value='';
 }
 
 
@@ -839,7 +888,7 @@ async function loadClaims(){
   if(!CLOUD_ENABLED){claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim);renderClaims();updateClaimSummary();return}
   const {data:rows,error}=await supa.from('uw_claims').select('*').order('serial_no',{ascending:true});
   if(error){console.error(error);claims=JSON.parse(localStorage.getItem(CLAIMS_KEY)||'[]').map(normalizeClaim)}
-  else{claims=(rows||[]).map(normalizeClaim);localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims))}
+  else{claims=(rows||[]).map(normalizeClaim).filter(r=>!pendingClaimDeletes.has(Number(r.serial_no)));localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims))}
   renderClaims();updateClaimSummary();renderMainClaims();
 }
 function claimStatusBadge(s){return '<span class="claimStatus claim-'+String(s||'').toLowerCase().replace(/\s+/g,'-')+'">'+esc(s||'')+'</span>'}
@@ -880,13 +929,23 @@ async function deleteClaim(serial){
   if(!r){alert('Claim not found.');return}
   if(!confirm('Delete Claim #'+serial+'? This will remove the shared claim for every user.'))return;
   // Optimistic UI: remove immediately, then confirm the cloud delete in the background.
+  pendingClaimDeletes.add(Number(serial));
   claims=claims.filter(x=>Number(x.serial_no)!==Number(serial));
   localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));
   if(Number(editingClaim)===Number(serial))closeClaimEditor();
   renderClaims();updateClaimSummary();renderMainClaims();
   if(CLOUD_ENABLED){
     const {error}=await supa.from('uw_claims').delete().eq('serial_no',serial);
-    if(error){claims.push(r);claims.sort((a,b)=>(Number(a.serial_no)||0)-(Number(b.serial_no)||0));localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));renderClaims();updateClaimSummary();renderMainClaims();alert('Claim delete failed: '+error.message);}
+    if(error){
+      pendingClaimDeletes.delete(Number(serial));
+      claims.push(r);claims.sort((a,b)=>(Number(a.serial_no)||0)-(Number(b.serial_no)||0));
+      localStorage.setItem(CLAIMS_KEY,JSON.stringify(claims));renderClaims();updateClaimSummary();renderMainClaims();
+      alert('Claim delete failed: '+error.message);
+    } else {
+      pendingClaimDeletes.delete(Number(serial));
+    }
+  } else {
+    pendingClaimDeletes.delete(Number(serial));
   }
 }
 
@@ -992,12 +1051,22 @@ async function deleteRequest(ref){
   if(!r)return;
   if(!confirm('Delete request #'+ref+'? This will remove the shared request for every authorised user.'))return;
   // Optimistic UI: remove immediately so the listing never waits for the cloud round-trip.
+  pendingRequestDeletes.add(Number(ref));
   data=data.filter(x=>Number(x.ref)!==Number(ref));
   localStorage.setItem(KEY,JSON.stringify(data));
   render();updateReports();updateFollowups();
   if(CLOUD_ENABLED){
     const {error}=await supa.from('uw_requests').delete().eq('ref',Number(ref));
-    if(error){data.push(r);data.sort((a,b)=>Number(b.ref||0)-Number(a.ref||0));localStorage.setItem(KEY,JSON.stringify(data));render();updateReports();updateFollowups();alert('Request delete failed: '+error.message);}
+    if(error){
+      pendingRequestDeletes.delete(Number(ref));
+      data.push(r);data.sort((a,b)=>Number(b.ref||0)-Number(a.ref||0));
+      localStorage.setItem(KEY,JSON.stringify(data));render();updateReports();updateFollowups();
+      alert('Request delete failed: '+error.message);
+    } else {
+      pendingRequestDeletes.delete(Number(ref));
+    }
+  } else {
+    pendingRequestDeletes.delete(Number(ref));
   }
 }
 function formatMoney(v){if(v===''||v==null||isNaN(Number(v)))return '';return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
