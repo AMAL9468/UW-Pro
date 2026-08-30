@@ -1368,6 +1368,7 @@ async function deleteRequest(ref){
   // Remove from the visible Request Listing immediately; do not wait for refresh.
   document.querySelectorAll('#rows tr[data-request-ref="'+deletedRef+'"]').forEach(row=>row.remove());
   render();renderMotorRequests();updateReports();updateFollowups();
+  document.querySelectorAll('#rows tr[data-request-ref="'+deletedRef+'"], #motorRows tr[data-request-ref="'+deletedRef+'"], [data-request-ref="'+deletedRef+'"]').forEach(row=>row.remove());
   showSuccessToast('Request deleted');
   if(CLOUD_ENABLED){
     const {error}=await supa.from('uw_requests').delete().eq('ref',Number(ref));
