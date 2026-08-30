@@ -370,6 +370,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
     <div><label>UW Name</label><input id="cancelUwName"></div>
     <div><label>Status</label><select id="cancelStatus"><option>Requested</option><option>Additional Info Waiting</option><option>Cancelled</option><option>Bank Details Submitted</option><option>Payment Under Process</option><option>Closed</option></select></div>
     <div><label>Priority</label><select id="cancelPriority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
+    <div style="grid-column:1/-1"><label>Notes</label><textarea id="cancelNotes" rows="3" placeholder="Notes"></textarea></div>
     <div><label>Follow-up Date</label><div class="datePickerWrap"><input id="cancelFollow" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"><button type="button" class="calendarBtn" onclick="openDatePicker('cancelFollow')" aria-label="Choose date">📅</button><input id="picker_cancelFollow" class="nativeDatePicker" type="date" tabindex="-1" aria-hidden="true"></div></div>
   </div>
   <div class="actions"><button id="saveCancellationBtn" class="primary" onclick="saveCancellation()">Save / Update Cancellation</button><button class="secondary" onclick="closeCancellationEditor()">Cancel</button></div>
@@ -762,22 +763,33 @@ function dueGroups(field){
 function rValue(r,field){return normalizeDate(r[field])||''}
 function followupGroups(){return dueGroups('follow')}
 function deadlineGroups(){return dueGroups('quoteDeadline')}
+function cancellationFollowupGroups(){
+  const t=today();
+  const active=(cancellationData||[]).filter(r=>r.follow&&!['Closed','Cancelled'].includes(r.status));
+  return {
+    overdue:active.filter(r=>normalizeDate(r.follow)<t).sort((a,b)=>String(r.follow||'').localeCompare(String(b.follow||''))),
+    today:active.filter(r=>normalizeDate(r.follow)===t).sort((a,b)=>rank(a.priority)-rank(b.priority)),
+    upcoming:active.filter(r=>normalizeDate(r.follow)>t&&dateDiff(r.follow,t)<=7).sort((a,b)=>String(r.follow||'').localeCompare(String(b.follow||'')))
+  };
+}
 function updateFollowups(){
-  const g=followupGroups(), d=deadlineGroups();
-  if($('fuOverdue'))$('fuOverdue').textContent=g.overdue.length;
-  if($('fuToday'))$('fuToday').textContent=g.today.length;
-  if($('fuUpcoming'))$('fuUpcoming').textContent=g.upcoming.length;
-  const section=(title,items,field)=>{
+  const g=followupGroups(), d=deadlineGroups(), c=cancellationFollowupGroups();
+  if($('fuOverdue'))$('fuOverdue').textContent=g.overdue.length+d.overdue.length+c.overdue.length;
+  if($('fuToday'))$('fuToday').textContent=g.today.length+d.today.length+c.today.length;
+  if($('fuUpcoming'))$('fuUpcoming').textContent=g.upcoming.length+d.upcoming.length+c.upcoming.length;
+  const section=(title,items,field,kind,opener)=>{
     if(!items.length)return '';
     return '<div class="followupSection"><h3>'+title+'</h3>'+items.map(r=>{
       const dt=normalizeDate(r[field]); const diff=dateDiff(dt,today());
       const type=diff<0?'overdue':diff===0?'today':'upcoming';
       const label=type==='overdue'?'Overdue by '+Math.abs(diff)+' day'+(Math.abs(diff)===1?'':'s'):type==='today'?'Due today':'Due in '+diff+' day'+(diff===1?'':'s');
-      const kind=field==='follow'?'Follow-up':'Quotation deadline';
-      return '<div class="followupItem '+type+'"><div><b>#'+r.ref+' — '+esc(r.client)+'</b><div class="followupMeta">'+esc(r.agent||'')+' · '+esc(r.status||'')+' · '+kind+': '+esc(dt)+'</div></div><div class="followupAction"><span class="reminderBadge '+type+'">'+label+'</span> <button class="secondary" onclick="edit('+Number(r.ref)+')">Open</button></div></div>';
+      const ref=esc(String(r.ref||r.reference||''));
+      const client=esc(r.client||r.clientName||r.policyNumber||'');
+      const meta=esc((r.agent||r.agentName||'')+' · '+(r.status||'')+' · '+kind+': '+dt);
+      return '<div class="followupItem '+type+'"><div><b>#'+ref+' — '+client+'</b><div class="followupMeta">'+meta+'</div></div><div class="followupAction"><span class="reminderBadge '+type+'">'+label+'</span> <button class="secondary" onclick="'+opener+'('+Number(r.ref||r.serial_no||0)+')">Open</button></div></div>';
     }).join('')+'</div>';
   };
-  const html=section('Follow-ups — Overdue',g.overdue,'follow')+section('Follow-ups — Due Today',g.today,'follow')+section('Follow-ups — Next 7 Days',g.upcoming,'follow')+section('Quotation Deadlines — Overdue',d.overdue,'quoteDeadline')+section('Quotation Deadlines — Today',d.today,'quoteDeadline')+section('Quotation Deadlines — Next 7 Days',d.upcoming,'quoteDeadline');
+  const html=section('Follow-ups — Overdue',g.overdue,'follow','Follow-up','edit')+section('Follow-ups — Due Today',g.today,'follow','Follow-up','edit')+section('Follow-ups — Next 7 Days',g.upcoming,'follow','Follow-up','edit')+section('Quotation Deadlines — Overdue',d.overdue,'quoteDeadline','Quotation deadline','edit')+section('Quotation Deadlines — Today',d.today,'quoteDeadline','Quotation deadline','edit')+section('Quotation Deadlines — Next 7 Days',d.upcoming,'quoteDeadline','Quotation deadline','edit')+section('Cancellation Follow-ups — Overdue',c.overdue,'follow','Cancellation follow-up','editCancellation')+section('Cancellation Follow-ups — Due Today',c.today,'follow','Cancellation follow-up','editCancellation')+section('Cancellation Follow-ups — Next 7 Days',c.upcoming,'follow','Cancellation follow-up','editCancellation');
   $('followupList').innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups or quotation deadlines scheduled.</div>';
   updateNotificationButton();
 }
@@ -1222,7 +1234,7 @@ function editCancellation(ref){
   const r=cancellations.find(x=>Number(x.reference_no)===Number(ref));if(!r)return;if(!userCan('cancellations')||!userCan('edit')){alert('You do not have permission to edit cancellations.');return}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('mainPage').classList.add('active');document.querySelectorAll('.navBtn,.subNavBtn').forEach(x=>x.classList.remove('active'));$('navMain')?.classList.add('active');
   editingCancellation=ref;$('cancellationEditorTitle').textContent='Edit Cancellation #'+ref;$('dashboard').classList.add('hidden');$('editor')?.classList.add('hidden');$('claimEditor')?.classList.add('hidden');
-  $('cancelRef').value=r.reference_no||'';$('cancelPolicyNo').value=r.policy_number||'';$('cancelTrackingReference').value=r.tracking_reference||'';$('cancelCoverType').value=r.cover_type||'General';$('cancelAgent').value=r.agent_name||'';$('cancelUwName').value=r.uw_name||'';$('cancelStatus').value=r.status||'Requested';$('cancelPriority').value=r.priority||'Normal';setDateField('cancelDate',r.request_date||'');setDateField('cancelFollow',r.follow_up_date||'');
+  $('cancelRef').value=r.reference_no||'';$('cancelPolicyNo').value=r.policy_number||'';$('cancelTrackingReference').value=r.tracking_reference||'';$('cancelCoverType').value=r.cover_type||'General';$('cancelAgent').value=r.agent_name||'';$('cancelUwName').value=r.uw_name||'';$('cancelStatus').value=r.status||'Requested';$('cancelPriority').value=r.priority||'Normal'; $('cancelNotes').value=r.notes||'';setDateField('cancelDate',r.request_date||'');setDateField('cancelFollow',r.follow_up_date||'');
   $('cancellationEditor').classList.remove('hidden');$('cancellationEditor').scrollIntoView({block:'start',behavior:'instant'});
 }
 function closeCancellationEditor(){$('cancellationEditor').classList.add('hidden');editingCancellation=null;$('dashboard')?.classList.remove('hidden');}
