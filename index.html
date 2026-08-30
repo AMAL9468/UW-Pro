@@ -843,42 +843,48 @@ function endorsementFollowupGroups(){
 }
 function followupTotal(g){return g.overdue.length+g.today.length+g.upcoming.length}
 function updateFollowups(){
-  const g=typeof followupGroups==='function'?followupGroups():{overdue:[],today:[],upcoming:[]};
-  const cg=typeof claimFollowupGroups==='function'?claimFollowupGroups():{overdue:[],today:[],upcoming:[]};
-  const c=typeof cancellationFollowupGroups==='function'?cancellationFollowupGroups():{overdue:[],today:[],upcoming:[]};
-  const e=typeof endorsementFollowupGroups==='function'?endorsementFollowupGroups():{overdue:[],today:[],upcoming:[]};
-  const t=g.today.length+cg.today.length+c.today.length+e.today.length, o=g.overdue.length+cg.overdue.length+c.overdue.length+e.overdue.length, u=g.upcoming.length+cg.upcoming.length+c.upcoming.length+e.upcoming.length;
-  if($('fuOverdue'))$('fuOverdue').textContent=o;
-  if($('fuToday'))$('fuToday').textContent=t;
-  if($('fuUpcoming'))$('fuUpcoming').textContent=u;
+  const empty=()=>({overdue:[],today:[],upcoming:[]});
+  const g=typeof followupGroups==='function'?followupGroups():empty();
+  const cg=typeof claimFollowupGroups==='function'?claimFollowupGroups():empty();
+  const c=typeof cancellationFollowupGroups==='function'?cancellationFollowupGroups():empty();
+  const e=typeof endorsementFollowupGroups==='function'?endorsementFollowupGroups():empty();
+  const total=(x)=>x.overdue.length+x.today.length+x.upcoming.length;
+  const overdue=total(g)+total(cg)+total(c)+total(e);
+  const todayCount=g.today.length+cg.today.length+c.today.length+e.today.length;
+  const upcoming=g.upcoming.length+cg.upcoming.length+c.upcoming.length+e.upcoming.length;
+  if($('fuOverdue'))$('fuOverdue').textContent=overdue;
+  if($('fuToday'))$('fuToday').textContent=todayCount;
+  if($('fuUpcoming'))$('fuUpcoming').textContent=upcoming;
   const section=(title,items,field,kind,opener,idField)=>{
     if(!items.length)return '';
     return '<div class="followupSection"><h3>'+title+'</h3>'+items.map(r=>{
-      const dt=normalizeDate(r[field]); const diff=dateDiff(dt,today());
+      const dt=normalizeDate(r[field]); if(!dt)return '';
+      const diff=dateDiff(dt,today());
       const type=diff<0?'overdue':diff===0?'today':'upcoming';
       const label=type==='overdue'?'Overdue by '+Math.abs(diff)+' day'+(Math.abs(diff)===1?'':'s'):type==='today'?'Due today':'Due in '+diff+' day'+(diff===1?'':'s');
-      const ref=esc(String(idField==='claim'?(r.serial_no||''):r.ref||r.reference_no||''));
-      const client=esc(idField==='claim'?(r.client_name||r.policy_number||''):(idField==='cancellation'?(r.policy_number||''):(r.client||'')));
-      const source=idField==='claim'?'Claim':idField==='cancellation'?'Cancellation':((r.request_type||'General')+' Request');
-      const meta=esc(source+' · '+(r.agent_name||r.agent||'')+' · '+(r.status||'')+' · '+kind+': '+dt);
-      const id=Number(idField==='claim'?r.serial_no:idField==='cancellation'?r.reference_no:r.ref);
-      return '<div class="followupItem '+type+'"><div><b>#'+ref+' — '+client+'</b><div class="followupMeta">'+meta+'</div></div><div class="followupAction"><span class="reminderBadge '+type+'">'+label+'</span> <button class="secondary" onclick="'+opener+'('+id+')">Open</button></div></div>';
+      let ref='',client='',source='',id=null;
+      if(idField==='claim'){ref=String(r.serial_no||'');client=String(r.client_name||r.policy_number||'');source='Claim';id=Number(r.serial_no)}
+      else if(idField==='cancellation'){ref=String(r.reference_no||'');client=String(r.policy_number||'');source='Cancellation';id=Number(r.reference_no)}
+      else if(idField==='endorsement'){ref=String(r.sl_no||'');client=String(r.client_name||r.policy_number||'');source='Medical Endorsement';id=Number(r.sl_no)}
+      else {ref=String(r.ref||'');client=String(r.client||'');source=(r.request_type||'General')+' Request';id=Number(r.ref)}
+      const meta=esc(source+' · '+(r.agent_name||r.agent||'')+' · '+(r.status||'')+' · Follow-up: '+isoToDisplay(dt));
+      return '<div class="followupItem '+type+'"><div><b>#'+esc(ref)+' — '+esc(client)+'</b><div class="followupMeta">'+meta+'</div></div><div class="followupAction"><span class="reminderBadge '+type+'">'+label+'</span> <button class="secondary" onclick="'+opener+'('+id+')">Open</button></div></div>';
     }).join('')+'</div>';
   };
   let html='';
-  html+=section('Follow-ups — Overdue',g.overdue,'follow','Follow-up','edit','request');
-  html+=section('Follow-ups — Due Today',g.today,'follow','Follow-up','edit','request');
-  html+=section('Follow-ups — Next 7 Days',g.upcoming,'follow','Follow-up','edit','request');
-  html+=section('Claim Follow-ups — Overdue',cg.overdue,'follow_up_date','Claim follow-up','editClaim','claim');
-  html+=section('Claim Follow-ups — Due Today',cg.today,'follow_up_date','Claim follow-up','editClaim','claim');
-  html+=section('Claim Follow-ups — Next 7 Days',cg.upcoming,'follow_up_date','Claim follow-up','editClaim','claim');
-  html+=section('Cancellation Follow-ups — Overdue',c.overdue,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
-  html+=section('Cancellation Follow-ups — Due Today',c.today,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
-  html+=section('Cancellation Follow-ups — Next 7 Days',c.upcoming,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
-  html+=section('Medical Endorsement Follow-ups — Overdue',e.overdue,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
-  html+=section('Medical Endorsement Follow-ups — Due Today',e.today,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
-  html+=section('Medical Endorsement Follow-ups — Next 7 Days',e.upcoming,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
-  $('followupList').innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups scheduled.</div>';
+  html+=section('Requests — Overdue',g.overdue,'follow','Request follow-up','edit','request');
+  html+=section('Requests — Due Today',g.today,'follow','Request follow-up','edit','request');
+  html+=section('Requests — Upcoming',g.upcoming,'follow','Request follow-up','edit','request');
+  html+=section('Claims — Overdue',cg.overdue,'follow_up_date','Claim follow-up','editClaim','claim');
+  html+=section('Claims — Due Today',cg.today,'follow_up_date','Claim follow-up','editClaim','claim');
+  html+=section('Claims — Upcoming',cg.upcoming,'follow_up_date','Claim follow-up','editClaim','claim');
+  html+=section('Cancellations — Overdue',c.overdue,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
+  html+=section('Cancellations — Due Today',c.today,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
+  html+=section('Cancellations — Upcoming',c.upcoming,'follow_up_date','Cancellation follow-up','editCancellation','cancellation');
+  html+=section('Medical Endorsements — Overdue',e.overdue,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
+  html+=section('Medical Endorsements — Due Today',e.today,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
+  html+=section('Medical Endorsements — Upcoming',e.upcoming,'follow_up_date','Endorsement follow-up','editEndorsement','endorsement');
+  const list=$('followupList'); if(list)list.innerHTML=html||'<div class="muted" style="padding:12px">No follow-ups scheduled.</div>';
   updateNotificationButton();
 }
 
@@ -1117,6 +1123,7 @@ async function refreshCurrentPage(pageId){
     }
     updateReports();
     updateFollowups();
+    render();
     renderMotorRequests();
     renderClaims();
     renderCancellations();
@@ -1140,6 +1147,7 @@ async function refreshFollowupPage(){
       await cloudLoad();
       if(userCan('claims')) await loadClaims();
       if(userCan('cancellations')) await loadCancellations();
+      if(userCan('endorsements')) await loadEndorsements();
     }
     updateFollowups();
     sessionStorage.setItem('uwpro_last_page','followupsPage');
@@ -1240,7 +1248,7 @@ async function saveClaim(){
   closeClaimEditor();renderClaims();updateClaimSummary();renderMainClaims();updateFollowups();
   showSuccessToast(wasEditing?'Claim updated successfully':'Claim created successfully');
   // After saving, stay in the Claim Listing instead of returning to Main.
-  if(userCan('claims')) showPage('claimsPage',$('navClaims'));
+  if(userCan('claims')) showPage('claimsPage',$('navClaimListing'));
 }
 async function exportClaimsExcel(){
   if(!userCan('claimsExport')){alert('You do not have permission to export claims.');return}
