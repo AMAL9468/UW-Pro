@@ -133,7 +133,8 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body class="appBootHidden">
+<style>.appBootHidden{visibility:hidden!important}</style>
 <div id="successToast" role="status" aria-live="polite"></div>
 
 <div id="login" class="login" style="visibility:hidden"><div class="loginBox">
@@ -748,6 +749,7 @@ async function login(){
     $('login').classList.add('hidden'); $('who').textContent=profile.username;
     applyPermissions();
     showPage('mainPage',document.querySelector('.navBtn'));
+    document.body.classList.remove('appBootHidden');
     await cloudLoad();
     if(userCan('claims')) await loadClaims();
   }catch(e){
@@ -784,6 +786,7 @@ async function logout(){
 function showLoginScreen(){
   const login=$('login');
   if(login) login.style.visibility='visible';
+  document.body.classList.remove('appBootHidden');
 }
 
 // Never leave the user on a loading screen. If session restoration takes too long,
@@ -835,6 +838,7 @@ async function restoreSession(){
     clearTimeout(loginRevealTimer);
     $('login').classList.add('hidden');$('login').style.visibility='visible';$('who').textContent=u.username;const av=$('avatarInitial');if(av)av.textContent=(u.username||'A').charAt(0).toUpperCase();const wr=$('whoRole');if(wr)wr.textContent=u.role||'User';applyPermissions();
     showPage('mainPage',document.querySelector('.navBtn'));
+    document.body.classList.remove('appBootHidden');
     await cloudLoad();
     if(userCan('claims')) await loadClaims();
   }catch(e){
