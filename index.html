@@ -413,74 +413,111 @@ async function cloudDeleteAll(){
   return true;
 }
 
-const $=id=>document.getElementById(id), today=()=>new Date().toISOString().slice(0,10);
-function isoToDisplay(v){const t=String(v??'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const [y,m,d]=t.split('-');return `${d}-${m}-${y}`}
-function displayToIso(v){const t=String(v??'').trim();if(!t)return '';if(/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const m=t.match(/^(\d{2})-(\d{2})-(\d{4})$/);if(!m)return t;const [,d,mo,y]=m;const dt=new Date(`${y}-${mo}-${d}T00:00:00`);if(dt.getFullYear()!=Number(y)||dt.getMonth()+1!=Number(mo)||dt.getDate()!=Number(d))return t;return `${y}-${mo}-${d}`}
+const $=id=>document.getElementById(id);
+function today(){
+  const d=new Date();
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function isoToDisplay(v){
+  const t=String(v??'').trim();
+  const m=t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
+function displayToIso(v){
+  const t=String(v??'').trim().replace(/\s+/g,'');
+  if(!t)return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(t)){
+    const [y,mo,d]=t.split('-').map(Number);
+    const dt=new Date(y,mo-1,d);
+    return dt.getFullYear()===y && dt.getMonth()===mo-1 && dt.getDate()===d ? t : '';
+  }
+  const m=t.match(/^(\d{2})[-\/.](\d{2})[-\/.](\d{4})$/);
+  if(!m)return '';
+  const d=Number(m[1]),mo=Number(m[2]),y=Number(m[3]);
+  const dt=new Date(y,mo-1,d);
+  if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==d)return '';
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
 function normalizeTypedDate(v){
   let t=String(v??'').trim().replace(/\s+/g,'');
   if(!t)return '';
-  // Accept both DDMMYYYY (02092026) and YYYYMMDD (20260902).
   const digits=t.replace(/\D/g,'');
-  if(digits.length===8 && /^\d{8}$/.test(digits)){
+  // 02092026 -> 02-09-2026. Also accept 20260902.
+  if(/^\d{8}$/.test(digits)){
     let d,m,y;
-    if(Number(digits.slice(0,4))>=1900){
-      y=digits.slice(0,4); m=digits.slice(4,6); d=digits.slice(6,8);
-    }else{
-      d=digits.slice(0,2); m=digits.slice(2,4); y=digits.slice(4,8);
-    }
+    if(Number(digits.slice(0,4))>=1900){y=digits.slice(0,4);m=digits.slice(4,6);d=digits.slice(6,8)}
+    else {d=digits.slice(0,2);m=digits.slice(2,4);y=digits.slice(4,8)}
     const iso=displayToIso(`${d}-${m}-${y}`);
-    return /^\d{4}-\d{2}-\d{2}$/.test(iso)?isoToDisplay(iso):t;
+    return iso ? isoToDisplay(iso) : t;
   }
-  // Also normalize a partially/fully typed DDMMYYYY string once it reaches 8 digits.
-  if(/^\d{1,8}$/.test(t) && t.length===8){
-    const d=t.slice(0,2),m=t.slice(2,4),y=t.slice(4,8);
-    const iso=displayToIso(`${d}-${m}-${y}`);
-    return /^\d{4}-\d{2}-\d{2}$/.test(iso)?isoToDisplay(iso):t;
+  const iso=displayToIso(t);
+  return iso ? isoToDisplay(iso) : t.replace(/[^0-9\-\/\.]/g,'').slice(0,10);
+}
+function syncNativeDatePicker(id){
+  const p=$('picker_'+id), el=$(id);
+  if(!p||!el)return false;
+  if(p.value && /^\d{4}-\d{2}-\d{2}$/.test(p.value)){
+    el.value=isoToDisplay(p.value);
+    return true;
   }
-  return t.replace(/[^0-9-]/g,'').slice(0,10);
+  return false;
 }
 function openDatePicker(id){
   const p=$('picker_'+id),el=$(id);
   if(!p)return;
-  const iso=displayToIso(normalizeTypedDate(el?.value||''));
+  const iso=displayToIso(el?.value||'');
   p.value=iso||'';
-  p.style.pointerEvents='auto';
-  try{if(p.showPicker)p.showPicker();else p.click()}catch(e){try{p.click()}catch(_){} }
-}
-function syncNativeDatePicker(id){
-  const p=$('picker_'+id),el=$(id);
-  if(!p||!el)return;
-  if(p.value){
-    // Native date input always returns ISO YYYY-MM-DD; display field always stays DD-MM-YYYY.
-    el.value=isoToDisplay(p.value);
-  }
-}
-function initDatePickers(){
-  ['date','follow','expiry','claimDate','claimFollow'].forEach(id=>{
-    const p=$('picker_'+id);if(!p)return;
-    p.addEventListener('change',()=>syncNativeDatePicker(id));
-    p.addEventListener('input',()=>syncNativeDatePicker(id));
-  });
+  p.oninput=()=>syncNativeDatePicker(id);
+  p.onchange=()=>syncNativeDatePicker(id);
+  try{
+    if(typeof p.showPicker==='function') p.showPicker(); else p.click();
+  }catch(e){try{p.click()}catch(_){} }
+  // Some Android browsers update a hidden native date input after the picker closes
+  // without reliably firing change. Poll briefly and copy the ISO value to the text field.
+  let tries=0;
+  clearInterval(p.__datePoll);
+  p.__datePoll=setInterval(()=>{
+    tries++;
+    syncNativeDatePicker(id);
+    if(tries>=30){clearInterval(p.__datePoll);p.__datePoll=null;}
+  },100);
 }
 function setDateField(id,v){
-  const iso=displayToIso(normalizeTypedDate(v||''));
-  const el=$(id);if(el)el.value=iso?isoToDisplay(iso):'';
-  const p=$('picker_'+id);if(p)p.value=iso||'';
+  const iso=displayToIso(v||'');
+  const el=$(id),p=$('picker_'+id);
+  if(el)el.value=iso?isoToDisplay(iso):'';
+  if(p)p.value=iso||'';
 }
-function dateOrNull(v){const iso=displayToIso(normalizeTypedDate(v));return iso===''?null:iso}
+function dateOrNull(v){
+  const iso=displayToIso(normalizeTypedDate(v));
+  return iso||null;
+}
 function bindDateInput(id){
   const el=$(id);if(!el)return;
   el.addEventListener('input',()=>{
-    const formatted=normalizeTypedDate(el.value);
-    // When 8 digits are entered, immediately show DD-MM-YYYY.
-    if(/^\d{2}-\d{2}-\d{4}$/.test(formatted) || /^\d{8}$/.test(formatted)) el.value=formatted;
-    else el.value=formatted;
-    const p=$('picker_'+id);if(p){const iso=displayToIso(el.value);if(/^\d{4}-\d{2}-\d{2}$/.test(iso))p.value=iso;}
+    const raw=String(el.value||'').trim();
+    const digits=raw.replace(/\D/g,'');
+    if(/^\d{8}$/.test(digits)){
+      const formatted=normalizeTypedDate(digits);
+      el.value=formatted;
+    }else{
+      const iso=displayToIso(raw);
+      if(iso)el.value=isoToDisplay(iso);
+    }
+    const p=$('picker_'+id);
+    const iso=displayToIso(el.value);
+    if(p)p.value=iso||'';
   });
-  el.addEventListener('blur',()=>{const formatted=normalizeTypedDate(el.value);el.value=formatted;const p=$('picker_'+id);if(p){const iso=displayToIso(formatted);if(/^\d{4}-\d{2}-\d{2}$/.test(iso))p.value=iso;}});
+  el.addEventListener('blur',()=>{
+    const formatted=normalizeTypedDate(el.value);
+    const iso=displayToIso(formatted);
+    el.value=iso?isoToDisplay(iso):formatted;
+    const p=$('picker_'+id);if(p)p.value=iso||'';
+  });
 }
 ['claimDate','claimFollow','date','follow','expiry'].forEach(bindDateInput);
-initDatePickers();
+
 function togglePassword(id,btn){const el=$(id);if(!el)return;el.type=el.type==='password'?'text':'password';if(btn)btn.textContent=el.type==='password'?'👁':'🙈'}
 function setRequestTypeUI(type){
   type=type||'General';$('requestType').value=type;
@@ -1027,14 +1064,13 @@ function renderMainClaims(){
 
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function numOrNull(v){const t=String(v??'').trim();return t===''?null:Number(t)}
-function dateOrNull(v){const iso=displayToIso(v);return iso===''?null:iso}
 function newRequest(){newRequestType('General')}
 function newRequestType(type){
   if(!userCan('edit')){alert('You do not have permission to create/edit requests.');return}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('mainPage').classList.add('active');
   document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));$('navMain')?.classList.add('active');
   editing=null;$('editorTitle').textContent='New '+type+' Request';clearForm();setRequestTypeUI(type);$('claimEditor')?.classList.add('hidden');
-  $('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);setDateField('date',today());setDateField('follow',new Date(Date.now()+3*864e5).toISOString().slice(0,10));
+  $('ref').value=(data.reduce((m,r)=>Math.max(m,Number(r.ref)||0),0)+1);setDateField('date',today());{const d=new Date();d.setDate(d.getDate()+3);setDateField('follow',`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);}
   $('dashboard').classList.add('hidden');$('editor').classList.remove('hidden');$('editor').scrollIntoView({block:'start',behavior:'instant'});
 }
 function clearForm(){['uwName','agent','client','phone','email','trackingReference','cover','follow','members','expiry','prevPremium','quotePremium','prevInsurer','remarks'].forEach(id=>{const el=$(id);if(el)el.value='';});$('medicalType').value='Individual';$('priority').value='Normal';$('status').value='Pending'}
@@ -1057,7 +1093,7 @@ function showSuccessToast(message){
 
 async function save(){
   const type=$('requestType').value||'General';
-  let r={ref:Number($('ref').value),request_type:type,uw_name:$('uwName').value.trim(),medical_type:type==='Medical'?$('medicalType').value:null,tracking_reference:$('trackingReference').value.trim(),date:displayToIso($('date').value),agent:$('agent').value.trim(),client:$('client').value.trim(),phone:$('phone').value.trim(),email:$('email').value.trim(),cover:$('cover').value.trim(),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),members:type==='Motor'?null:numOrNull($('members').value),expiry:type==='Motor'?null:dateOrNull($('expiry').value),prevPremium:type==='Motor'?null:numOrNull($('prevPremium').value),quotePremium:type==='Motor'?null:numOrNull($('quotePremium').value),prevInsurer:$('prevInsurer').value.trim(),remarks:$('remarks').value.trim()};
+  let r={ref:Number($('ref').value),request_type:type,uw_name:$('uwName').value.trim(),medical_type:type==='Medical'?$('medicalType').value:null,tracking_reference:$('trackingReference').value.trim(),date:dateOrNull($('date').value),agent:$('agent').value.trim(),client:$('client').value.trim(),phone:$('phone').value.trim(),email:$('email').value.trim(),cover:$('cover').value.trim(),priority:$('priority').value,status:$('status').value,follow:dateOrNull($('follow').value),members:type==='Motor'?null:numOrNull($('members').value),expiry:type==='Motor'?null:dateOrNull($('expiry').value),prevPremium:type==='Motor'?null:numOrNull($('prevPremium').value),quotePremium:type==='Motor'?null:numOrNull($('quotePremium').value),prevInsurer:$('prevInsurer').value.trim(),remarks:$('remarks').value.trim()};
   if(!r.client||!r.agent||!r.date){alert('Please fill Date, Agent and Client.');return}
   if(CLOUD_ENABLED){const ok=await cloudUpsert(r);if(!ok)return}
   if(editing){data[data.findIndex(x=>Number(x.ref)===Number(editing))]=r}else{data=data.some(x=>Number(x.ref)===Number(r.ref))?data.map(x=>Number(x.ref)===Number(r.ref)?r:x):[...data,r]}
