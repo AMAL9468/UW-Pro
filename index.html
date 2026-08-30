@@ -48,7 +48,8 @@ h1{margin:0;font-size:22px;color:#1f4e78}.wrap{max-width:1400px;margin:auto;padd
 
 
 .claimStatus{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800}
-.claim-requested{background:#fef3c7;color:#92400e}.claim-registered{background:#dbeafe;color:#1d4ed8}
+.claim-requested{background:#fef3c7;color:#92400e}
+.cancelled{background:#fee2e2;color:#b91c1c}.claim-registered{background:#dbeafe;color:#1d4ed8}
 .claim-addition-info{background:#ffedd5;color:#c2410c}.claim-payment-under-process{background:#dcfce7;color:#15803d}
 .claim-urgent{background:#fee2e2;color:#b91c1c}.claim-high{background:#ffedd5;color:#c2410c}
 .claim-normal{background:#e5e7eb;color:#475569}.claim-low{background:#f1f5f9;color:#64748b}
@@ -203,7 +204,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
 
 <div id="requestsPage" class="page">
 <div class="card" style="margin-bottom:14px">
-  <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">General &amp; Medical Request Listing</div><div class="muted">All shared requests created by authorised users.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="requestRefreshBtn" class="listingRefreshBtn" onclick="refreshRequestListing()">↻ Refresh</button><button id="exportBtn" class="secondary" onclick="exportExcel()">Export Requests Excel</button></div></div>
+  <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">General &amp; Medical Request Listing</div><div class="muted">All shared requests created by authorised users.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="requestRefreshBtn" class="listingRefreshBtn" onclick="refreshRequestListing()">↻ Refresh</button><button id="exportBtn" class="secondary" onclick="exportGeneralMedicalExcel()">Export Excel</button></div></div>
   <div class="toolbar">
     <input id="search" placeholder="Search client, reference, agent, UW name..." oninput="render()">
     <select id="requestTypeFilter" onchange="render()"><option value="">All Types</option><option>General</option><option>Medical</option></select>
@@ -222,7 +223,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
 
 <div id="motorRequestsPage" class="page">
   <div class="card" style="margin-bottom:14px">
-    <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">Motor Request Listing</div><div class="muted">Motor requests only.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="motorRefreshBtn" class="listingRefreshBtn" onclick="refreshMotorListing()">↻ Refresh</button><button id="motorExportBtn" class="secondary" onclick="exportExcel()">Export Requests Excel</button></div></div>
+    <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">Motor Request Listing</div><div class="muted">Motor requests only.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="motorRefreshBtn" class="listingRefreshBtn" onclick="refreshMotorListing()">↻ Refresh</button><button id="motorExportBtn" class="secondary" onclick="exportMotorExcel()">Export Excel</button></div></div>
     <div class="toolbar">
       <input id="motorSearch" placeholder="Search client, reference, agent, UW name..." oninput="renderMotorRequests()">
       <select id="motorStatusFilter" onchange="renderMotorRequests()"><option value="">All Status</option><option>Pending</option><option>Quoted</option><option>Confirmed</option><option>Issued</option><option>Declined</option></select>
@@ -275,7 +276,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
 <div id="claimsPage" class="page">
   <div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
     <div><h2 class="sectionTitle" style="margin-bottom:4px">General Claims</h2><div class="muted">Manage general claims, status, priority and follow-ups.</div></div>
-    <div class="actions" style="margin-top:0"><button id="claimRefreshBtn" class="listingRefreshBtn" onclick="refreshClaimListing()">↻ Refresh</button><button id="claimExportBtn" class="secondary" onclick="exportClaimsExcel()">Export Claims Excel</button></div>
+    <div class="actions" style="margin-top:0"><button id="claimRefreshBtn" class="listingRefreshBtn" onclick="refreshClaimListing()">↻ Refresh</button><button id="claimExportBtn" class="secondary" onclick="exportClaimsExcel()">Export Excel</button></div>
   </div></div>
   <div class="claimSummaryGrid" style="margin-bottom:14px">
     <div class="card"><div class="muted">Total Claims</div><div class="num" id="claimTotal">0</div></div>
@@ -296,11 +297,11 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
 
 <div id="cancellationsPage" class="page">
   <div class="card" style="margin-bottom:14px">
-    <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">Cancellation Listing</div><div class="muted">Track policy cancellation requests.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cancellationRefreshBtn" class="listingRefreshBtn" onclick="refreshCancellationListing()">↻ Refresh</button></div></div>
+    <div class="listingTitle"><div><div class="sectionTitle" style="margin-bottom:4px">Cancellation Listing</div><div class="muted">Track policy cancellation requests.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cancellationRefreshBtn" class="listingRefreshBtn" onclick="refreshCancellationListing()">↻ Refresh</button><button id="cancellationExportBtn" class="secondary" onclick="exportCancellationsExcel()">Export Excel</button></div></div>
     <div class="toolbar">
       <input id="cancellationSearch" placeholder="Search policy, reference, tracking reference, agent, client..." oninput="renderCancellations()">
       <select id="cancellationTypeFilter" onchange="renderCancellations()"><option value="">All Cover Types</option><option>General</option><option>Medical</option><option>Motor</option></select>
-      <select id="cancellationStatusFilter" onchange="renderCancellations()"><option value="">All Status</option><option>Requested</option><option>Bank Details Submitted</option><option>Payment Under Process</option><option>Closed</option></select>
+      <select id="cancellationStatusFilter" onchange="renderCancellations()"><option value="">All Status</option><option>Requested</option><option>Additional Info Waiting</option><option>Cancelled</option><option>Bank Details Submitted</option><option>Payment Under Process</option><option>Closed</option></select>
       <select id="cancellationPriorityFilter" onchange="renderCancellations()"><option value="">All Priority</option><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select>
     </div>
     <div class="tableWrap"><table style="min-width:1350px"><thead><tr><th>Ref</th><th>Policy Number</th><th>Tracking Reference</th><th>Type of Cover</th><th>Status</th><th>Priority</th><th>Request Date</th><th>Agent Name</th><th>UW Name</th><th>Follow-up Date</th><th>Action</th></tr></thead><tbody id="cancellationRows"></tbody></table></div>
@@ -367,7 +368,7 @@ header{height:78px;padding:10px 24px;background:#fff;border-bottom:1px solid var
     <div><label>Request Date</label><div class="datePickerWrap"><input id="cancelDate" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"><button type="button" class="calendarBtn" onclick="openDatePicker('cancelDate')" aria-label="Choose date">📅</button><input id="picker_cancelDate" class="nativeDatePicker" type="date" tabindex="-1" aria-hidden="true"></div></div>
     <div><label>Agent Name</label><input id="cancelAgent"></div>
     <div><label>UW Name</label><input id="cancelUwName"></div>
-    <div><label>Status</label><select id="cancelStatus"><option>Requested</option><option>Bank Details Submitted</option><option>Payment Under Process</option><option>Closed</option></select></div>
+    <div><label>Status</label><select id="cancelStatus"><option>Requested</option><option>Additional Info Waiting</option><option>Cancelled</option><option>Bank Details Submitted</option><option>Payment Under Process</option><option>Closed</option></select></div>
     <div><label>Priority</label><select id="cancelPriority"><option>Urgent</option><option>High</option><option>Normal</option><option>Low</option></select></div>
     <div><label>Follow-up Date</label><div class="datePickerWrap"><input id="cancelFollow" type="text" inputmode="numeric" placeholder="DD-MM-YYYY" autocomplete="off"><button type="button" class="calendarBtn" onclick="openDatePicker('cancelFollow')" aria-label="Choose date">📅</button><input id="picker_cancelFollow" class="nativeDatePicker" type="date" tabindex="-1" aria-hidden="true"></div></div>
   </div>
@@ -968,10 +969,10 @@ function applyPermissions(){
   ];
   map.forEach(([id,p])=>{const el=$(id);if(el)el.classList.toggle('hidden',!userCan(p))});
   const usersNav=$('navUsers');if(usersNav)usersNav.classList.toggle('hidden',!isMainAdmin);
-  const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));
+  const exportBtn=$('exportBtn');if(exportBtn)exportBtn.classList.toggle('hidden',!userCan('export'));const motorExportBtn=$('motorExportBtn');if(motorExportBtn)motorExportBtn.classList.toggle('hidden',!userCan('export'));
   const saveBtn=$('saveRequestBtn');if(saveBtn)saveBtn.classList.toggle('hidden',!userCan('edit'));
   const clearBtn=$('clearAllBtn');if(clearBtn)clearBtn.classList.toggle('hidden',!isMainAdmin);
-  const reqNav=$('navRequestListing');if(reqNav)reqNav.classList.toggle('hidden',!userCan('requests'));const motorNav=$('navMotorListing');if(motorNav)motorNav.classList.toggle('hidden',!userCan('requests'));const claimNav=$('navClaimListing');if(claimNav)claimNav.classList.toggle('hidden',!userCan('claims'));const cancelNav=$('navCancellationListing');if(cancelNav)cancelNav.classList.toggle('hidden',!userCan('cancellations'));const listingNav=$('navListing');if(listingNav)listingNav.classList.toggle('hidden',!userCan('requests')&&!userCan('claims')&&!userCan('cancellations'));['tileGeneral','tileMedical','tileMotor'].forEach(id=>$(id)?.classList.toggle('hidden',!userCan('edit')));['tileGeneralClaim','tileMedicalClaim','tileMotorClaim'].forEach(id=>$(id)?.classList.toggle('hidden',!(userCan('claims')&&userCan('edit'))));const adminCard=$('adminDetailsCard');if(adminCard)adminCard.classList.toggle('hidden',!isMainAdmin);const cancelTile=$('tileCancellation');if(cancelTile)cancelTile.classList.toggle('hidden',!userCan('cancellations')||!userCan('edit'));const cancelSave=$('saveCancellationBtn');if(cancelSave)cancelSave.classList.toggle('hidden',!userCan('edit'));
+  const reqNav=$('navRequestListing');if(reqNav)reqNav.classList.toggle('hidden',!userCan('requests'));const motorNav=$('navMotorListing');if(motorNav)motorNav.classList.toggle('hidden',!userCan('requests'));const claimNav=$('navClaimListing');if(claimNav)claimNav.classList.toggle('hidden',!userCan('claims'));const cancelNav=$('navCancellationListing');if(cancelNav)cancelNav.classList.toggle('hidden',!userCan('cancellations'));const listingNav=$('navListing');if(listingNav)listingNav.classList.toggle('hidden',!userCan('requests')&&!userCan('claims')&&!userCan('cancellations'));['tileGeneral','tileMedical','tileMotor'].forEach(id=>$(id)?.classList.toggle('hidden',!userCan('edit')));['tileGeneralClaim','tileMedicalClaim','tileMotorClaim'].forEach(id=>$(id)?.classList.toggle('hidden',!(userCan('claims')&&userCan('edit'))));const adminCard=$('adminDetailsCard');if(adminCard)adminCard.classList.toggle('hidden',!isMainAdmin);const cancelTile=$('tileCancellation');if(cancelTile)cancelTile.classList.toggle('hidden',!userCan('cancellations')||!userCan('edit'));const cancelSave=$('saveCancellationBtn');if(cancelSave)cancelSave.classList.toggle('hidden',!userCan('edit'));const cancelExport=$('cancellationExportBtn');if(cancelExport)cancelExport.classList.toggle('hidden',!userCan('export'));
   const claimExportBtn=$('claimExportBtn');if(claimExportBtn)claimExportBtn.classList.toggle('hidden',!userCan('claimsExport'));
   const claimNewBtn=$('claimNewBtn');if(claimNewBtn)claimNewBtn.classList.toggle('hidden',!userCan('edit'));
   const claimSaveBtn=$('saveClaimBtn');if(claimSaveBtn)claimSaveBtn.classList.toggle('hidden',!userCan('edit'));
@@ -1257,22 +1258,103 @@ if(confirm('GLOBAL DELETE: Delete all shared underwriting requests AND claims fo
   if(CLOUD_ENABLED){const ok=await cloudDeleteAll();if(!ok)return}
   data=[];claims=[];cancellations=[];localStorage.removeItem(KEY);localStorage.removeItem(CLAIMS_KEY);localStorage.removeItem(CANCELLATIONS_KEY);render();renderMotorRequests();renderClaims();renderCancellations();updateReports();updateFollowups();updateClaimSummary()
 }}
-async function exportExcel(){
-  if(!userCan('export')){alert('You do not have permission to export requests.');return}
-  if(!data.length){alert('No requests to export.');return}
-  if(!window.ExcelJS){await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';sc.onload=resolve;sc.onerror=reject;document.head.appendChild(sc)}).catch(()=>{})}
-  if(!window.ExcelJS){alert('Excel export library could not load. Please check your internet connection and try again.');return}
-  const headers=['S.No.','Reference No.','Request Type','UW Name','Tracking Reference','Request Date','Month','Ageing (Days)','Agent / Broker','Client / Insured','Phone','Email','Cover Type','Individual / Group','Priority','Status','Follow-up Date','Members','Policy Expiry','Previous Premium','Quoted Premium','Previous Insurer','Remarks'];
-  const body=data.map((r,i)=>[i+1,r.ref,r.request_type||'General',r.uw_name||'',r.tracking_reference||'',r.date,monthLabel(r.date),ageingDays(r.date),r.agent,r.client,r.phone||'',r.email||'',r.cover||'',r.medical_type||'',r.priority,r.status,r.follow||'',r.members==null?'':r.members,r.expiry||'',r.prevPremium==null?'':r.prevPremium,r.quotePremium==null?'':r.quotePremium,r.prevInsurer||'',r.remarks||'']);
-  const wb=new ExcelJS.Workbook();wb.creator='UW Pro';wb.created=new Date();wb.modified=new Date();const ws=wb.addWorksheet('Requests',{views:[{state:'frozen',ySplit:1}]});ws.addRow(headers);body.forEach(row=>ws.addRow(row));
-  const borderColor='B7C3D0',border={top:{style:'thin',color:{argb:borderColor}},bottom:{style:'thin',color:{argb:borderColor}},left:{style:'thin',color:{argb:borderColor}},right:{style:'thin',color:{argb:borderColor}}};
-  ws.getRow(1).height=28;ws.getRow(1).eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'1F4E78'}};c.font={bold:true,color:{argb:'FFFFFF'},size:11};c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=border});
-  [8,14,14,20,18,14,14,13,20,26,17,28,22,16,12,13,15,10,15,16,16,20,35].forEach((w,i)=>ws.getColumn(i+1).width=w);
-  for(let r=2;r<=ws.rowCount;r++){const row=ws.getRow(r);row.height=22;row.eachCell((cell,col)=>{cell.border=border;cell.alignment={vertical:'middle',wrapText:col===23}});[6,17,19].forEach(c=>{const cell=row.getCell(c);if(cell.value){const v=String(cell.value);if(/^\d{4}-\d{2}-\d{2}$/.test(v)){const [y,m,d]=v.split('-').map(Number);cell.value=new Date(Date.UTC(y,m-1,d));cell.numFmt='dd-mm-yyyy'}}});[20,21].forEach(c=>row.getCell(c).numFmt='#,##0.00');const st=String(row.getCell(16).value||''),pr=String(row.getCell(15).value||'');const sc={Pending:'FFF2CC',Quoted:'FFF2CC',Confirmed:'D9EAF7',Issued:'E2F0D9',Declined:'F4CCCC'},pc={Urgent:'F4CCCC',High:'FCE4D6',Normal:'E7E6E6',Low:'F2F2F2'};if(sc[st]){const c=row.getCell(16);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:sc[st]}};c.font={bold:true}}if(pc[pr]){const c=row.getCell(15);c.fill={type:'pattern',pattern:'solid',fgColor:{argb:pc[pr]}};c.font={bold:true}}}
-  ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:headers.length}};ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:'A4'};ws.pageMargins={left:0.25,right:0.25,top:0.5,bottom:0.5,header:0.2,footer:0.2};ws.headerFooter.oddFooter='Page &P of &N';
-  const buffer=await wb.xlsx.writeBuffer(),blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='UW_Pro_Requests.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+async function ensureExcelJS(){
+  if(window.ExcelJS)return true;
+  try{
+    await new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';sc.onload=resolve;sc.onerror=reject;document.head.appendChild(sc)});
+  }catch(e){}
+  if(!window.ExcelJS){alert('Excel export library could not load. Please check your internet connection.');return false}
+  return true;
 }
-['pMain','pReports','pRequests','pFollow','pClaims','pClaimsExport','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
+function excelDateValue(v){
+  const t=String(v??'').trim();
+  const m=t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m?new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]))):v||'';
+}
+function exportStatusColor(status){
+  return ({
+    'Pending':'FFF2CC','Quoted':'FFF2CC','Confirmed':'D9EAF7','Issued':'E2F0D9','Declined':'F4CCCC',
+    'Requested':'FFF2CC','Additional Info Waiting':'FCE4D6','Addition Info':'FCE4D6','Registered':'D9EAF7','Cancelled':'F4CCCC',
+    'Bank Details Submitted':'E2F0D9','Payment Under Process':'E2F0D9','Closed':'E2F0D9'
+  })[String(status||'')];
+}
+function exportPriorityColor(priority){return ({Urgent:'F4CCCC',High:'FCE4D6',Normal:'E7E6E6',Low:'F2F2F2'})[String(priority||'')];}
+function styleExportSheet(ws, rows, dateCols=[], statusCol=null, priorityCol=null, wrapCols=[]){
+  const borderColor='B7C3D0',border={top:{style:'thin',color:{argb:borderColor}},bottom:{style:'thin',color:{argb:borderColor}},left:{style:'thin',color:{argb:borderColor}},right:{style:'thin',color:{argb:borderColor}}};
+  ws.getRow(1).height=30;
+  ws.getRow(1).eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'1F4E78'}};c.font={bold:true,color:{argb:'FFFFFF'},size:11};c.alignment={horizontal:'center',vertical:'middle',wrapText:true};c.border=border});
+  for(let r=2;r<=ws.rowCount;r++){
+    const row=ws.getRow(r);row.height=22;
+    row.eachCell((cell,col)=>{cell.border=border;cell.alignment={vertical:'middle',wrapText:wrapCols.includes(col)}});
+    dateCols.forEach(col=>{const cell=row.getCell(col);if(cell.value){cell.value=excelDateValue(cell.value);if(cell.value instanceof Date)cell.numFmt='dd-mm-yyyy'}});
+    if(statusCol){const c=row.getCell(statusCol),fill=exportStatusColor(c.value);if(fill){c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}};c.font={bold:true};c.alignment={horizontal:'center',vertical:'middle'}}}
+    if(priorityCol){const c=row.getCell(priorityCol),fill=exportPriorityColor(c.value);if(fill){c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}};c.font={bold:true};c.alignment={horizontal:'center',vertical:'middle'}}}
+  }
+  // Auto-fit based on header + data, with sensible min/max bounds.
+  for(let col=1;col<=ws.columnCount;col++){
+    let max=0;
+    for(let r=1;r<=ws.rowCount;r++){
+      const v=ws.getCell(r,col).value;
+      let text='';
+      if(v instanceof Date) text='dd-mm-yyyy';
+      else if(v!=null) text=String(v);
+      max=Math.max(max,Math.min(text.split(/\n/).reduce((m,x)=>Math.max(m,x.length),0),60));
+    }
+    ws.getColumn(col).width=Math.min(45,Math.max(10,max+2));
+  }
+  ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:ws.columnCount}};
+  ws.views=[{state:'frozen',ySplit:1}];
+  ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:'A4'};
+  ws.pageMargins={left:0.25,right:0.25,top:0.5,bottom:0.5,header:0.2,footer:0.2};
+  ws.headerFooter.oddFooter='Page &P of &N';
+}
+async function downloadExcelWorkbook(wb,fileName){
+  const buffer=await wb.xlsx.writeBuffer(),blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),a=document.createElement('a');
+  const url=URL.createObjectURL(blob);a.href=url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function exportGeneralMedicalExcel(){
+  if(!userCan('export')){alert('You do not have permission to export requests.');return}
+  const rows=data.filter(r=>(r.request_type||'General')!=='Motor');if(!rows.length){alert('No General & Medical requests to export.');return}
+  if(!await ensureExcelJS())return;
+  const headers=['Ref','Type','UW Name','Tracking Reference','Date','Month','Agent / Broker','Client / Insured','Phone','Email','Cover','Priority','Status','Follow-up','Members','Policy Expiry','Previous Premium','Quoted Premium','Previous Insurer','Remarks'];
+  const body=rows.map(r=>[r.ref,r.request_type||'General',r.uw_name||'',r.tracking_reference||'',r.date||'',monthLabel(r.date),r.agent||'',r.client||'',r.phone||'',r.email||'',r.cover||'',r.priority||'',r.status||'',r.follow||'',r.members==null?'':r.members,r.expiry||'',r.prevPremium==null?'':r.prevPremium,r.quotePremium==null?'':r.quotePremium,r.prevInsurer||'',r.remarks||'']);
+  const wb=new ExcelJS.Workbook();wb.creator='UW Pro';const ws=wb.addWorksheet('General & Medical');ws.addRow(headers);body.forEach(r=>ws.addRow(r));
+  styleExportSheet(ws,body,[5,14,16],13,12,[20]);
+  [17,18].forEach(c=>{for(let r=2;r<=ws.rowCount;r++)ws.getCell(r,c).numFmt='#,##0.00'});
+  await downloadExcelWorkbook(wb,'UW_Pro_General_Medical_Requests.xlsx');
+}
+async function exportMotorExcel(){
+  if(!userCan('export')){alert('You do not have permission to export requests.');return}
+  const rows=data.filter(r=>(r.request_type||'General')==='Motor');if(!rows.length){alert('No Motor requests to export.');return}
+  if(!await ensureExcelJS())return;
+  const headers=['Ref','Type','UW Name','Tracking Reference','Date','Month','Agent / Broker','Client / Insured','Phone','Email','Cover','Priority','Status','Follow-up','Previous Insurer','Remarks'];
+  const body=rows.map(r=>[r.ref,'Motor',r.uw_name||'',r.tracking_reference||'',r.date||'',monthLabel(r.date),r.agent||'',r.client||'',r.phone||'',r.email||'',r.cover||'',r.priority||'',r.status||'',r.follow||'',r.prevInsurer||'',r.remarks||'']);
+  const wb=new ExcelJS.Workbook();wb.creator='UW Pro';const ws=wb.addWorksheet('Motor');ws.addRow(headers);body.forEach(r=>ws.addRow(r));
+  styleExportSheet(ws,body,[5,14],13,12,[16]);
+  await downloadExcelWorkbook(wb,'UW_Pro_Motor_Requests.xlsx');
+}
+async function exportClaimsExcel(){
+  if(!userCan('claimsExport')){alert('You do not have permission to export claims.');return}
+  if(!claims.length){alert('No claims to export.');return}
+  if(!await ensureExcelJS())return;
+  const headers=['S.No.','Policy No.','Claim No.','Reference','Tracking Reference','Type of Claim','Agent Name','Client Name','Request Date','Status','Priority','Notes','Follow-up Date'];
+  const body=claims.map((r,i)=>[i+1,r.policy_number||'',r.claim_number||'',r.reference||'',r.tracking_reference||'',r.claim_type||'',r.agent_name||'',r.client_name||'',r.request_date||'',r.status||'',r.priority||'',r.notes||'',r.follow_up_date||'']);
+  const wb=new ExcelJS.Workbook();wb.creator='UW Pro';const ws=wb.addWorksheet('Claims');ws.addRow(headers);body.forEach(r=>ws.addRow(r));
+  styleExportSheet(ws,body,[9,13],10,11,[12]);
+  await downloadExcelWorkbook(wb,'UW_Pro_Claims.xlsx');
+}
+async function exportCancellationsExcel(){
+  if(!userCan('export')){alert('You do not have permission to export cancellations.');return}
+  if(!cancellations.length){alert('No cancellations to export.');return}
+  if(!await ensureExcelJS())return;
+  const headers=['Ref','Policy Number','Tracking Reference','Type of Cover','Status','Priority','Request Date','Agent Name','UW Name','Follow-up Date'];
+  const body=cancellations.map(r=>[r.reference_no||'',r.policy_number||'',r.tracking_reference||'',r.cover_type||'',r.status||'',r.priority||'',r.request_date||'',r.agent_name||'',r.uw_name||'',r.follow_up_date||'']);
+  const wb=new ExcelJS.Workbook();wb.creator='UW Pro';const ws=wb.addWorksheet('Cancellations');ws.addRow(headers);body.forEach(r=>ws.addRow(r));
+  styleExportSheet(ws,body,[7,10],5,6,[]);
+  await downloadExcelWorkbook(wb,'UW_Pro_Cancellations.xlsx');
+}
+function exportExcel(){return exportGeneralMedicalExcel()}
+['pMain','pReports','pRequests','pFollow','pClaims','pClaimsExport','pCancellations','pExport','pEdit','pDelete'].forEach(id=>$(id)?.addEventListener('change',updatePermSummary));
 render();
 renderMainClaims();
 updateReports();
