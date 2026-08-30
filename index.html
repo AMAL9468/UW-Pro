@@ -437,21 +437,30 @@ function normalizeTypedDate(v){
 function openDatePicker(id){
   const p=$('picker_'+id),el=$(id);
   if(!p)return;
-  if(el)p.value=displayToIso(el.value)||'';
-  // Keep the native date control visually hidden, but temporarily make it clickable
-  // so mobile/desktop browsers reliably open the calendar picker.
+  const iso=displayToIso(normalizeTypedDate(el?.value||''));
+  p.value=iso||'';
   p.style.pointerEvents='auto';
-  try{if(p.showPicker)p.showPicker();else p.click()}catch(e){try{p.click()}catch(_){}}
+  try{if(p.showPicker)p.showPicker();else p.click()}catch(e){try{p.click()}catch(_){} }
+}
+function syncNativeDatePicker(id){
+  const p=$('picker_'+id),el=$(id);
+  if(!p||!el||!p.value)return;
+  el.value=isoToDisplay(p.value);
+  const normalized=normalizeTypedDate(el.value);
+  el.value=normalized;
 }
 function initDatePickers(){
   ['date','follow','expiry','claimDate','claimFollow'].forEach(id=>{
     const p=$('picker_'+id);if(!p)return;
-    const sync=()=>{const el=$(id);if(el&&p.value)el.value=isoToDisplay(p.value)};
-    p.addEventListener('change',sync);
-    p.addEventListener('input',sync);
+    p.addEventListener('change',()=>syncNativeDatePicker(id));
+    p.addEventListener('input',()=>syncNativeDatePicker(id));
   });
 }
-function setDateField(id,v){const el=$(id);if(el)el.value=isoToDisplay(v);const p=$('picker_'+id);if(p)p.value=displayToIso(v)||''}
+function setDateField(id,v){
+  const iso=displayToIso(normalizeTypedDate(v||''));
+  const el=$(id);if(el)el.value=iso?isoToDisplay(iso):'';
+  const p=$('picker_'+id);if(p)p.value=iso||'';
+}
 function dateOrNull(v){const iso=displayToIso(normalizeTypedDate(v));return iso===''?null:iso}
 function bindDateInput(id){
   const el=$(id);if(!el)return;
@@ -963,6 +972,8 @@ async function saveClaim(){
   const wasEditing=!!editingClaim;
   closeClaimEditor();renderClaims();updateClaimSummary();renderMainClaims();
   showSuccessToast(wasEditing?'Claim updated successfully':'Claim created successfully');
+  // After saving, stay in the Claim Listing instead of returning to Main.
+  if(userCan('claims')) showPage('claimsPage',$('navClaims'));
 }
 async function exportClaimsExcel(){
   if(!userCan('claimsExport')){alert('You do not have permission to export claims.');return}
@@ -1047,6 +1058,8 @@ async function save(){
   const wasEditing=!!editing;
   closeEditor();updateReports();updateFollowups();renderMainClaims();
   showSuccessToast(wasEditing?'Request updated successfully':'Request created successfully');
+  // After saving, stay in the Request Listing instead of returning to Main.
+  if(userCan('requests')) showPage('requestsPage',$('navRequests'));
 }
 function closeEditor(){$('editor').classList.add('hidden');$('claimEditor')?.classList.add('hidden');$('dashboard').classList.remove('hidden');render()}
 async function deleteRequest(ref){
